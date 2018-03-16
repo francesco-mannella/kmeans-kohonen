@@ -1,8 +1,4 @@
 # kmeans-kohonen
+We consider the dependencies between th [k-means](https://goo.gl/6qvLx2) algorithm and the [kohonen self organizing map](https://goo.gl/8bNsh).
 
-K-means clustering algorithm:
- 
-* Choose k initial centroids in the space of the input dataset 
-* Repeat:
-    * E-step: put each pattern from the input dataset in a cluster defined by its nearest centroid. 
-    * M-step: move each centroid so to minimize its distance from all the patterns in that cluster.
+* ***[k-means.ipynb](francesco-mannella/kmeans-kohonen/blob/master/k-means.ipynb)*** shows a simple implementation of k-means with linear algebra (numpy)

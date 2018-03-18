@@ -60,7 +60,7 @@ with graph.as_default():
     # gradient descent
     train = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
-    wit:h tf.Session(config=config) as session:
+    with tf.Session(config=config) as session:
         tf.global_variables_initializer().run()
         losses = []
         

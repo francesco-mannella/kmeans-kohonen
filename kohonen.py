@@ -44,18 +44,6 @@ def get_neighb(num_centroids, win_centroids, stds=1.0):
     return tf.transpose(tf.exp(-tf.pow(x - win_centroids, 2) / (2.0*tf.pow(stds, 2))))
 
 
-
-def get_neighb(num_centroids, means, stds=1.0):
-    num_means = means.get_shape().as_list()[0]
-    means = tf.reshape(means, [1, num_means])
-    means = tf.cast(means, tf.float32)
-    x = tf.stack([tf.range(num_centroids, dtype=tf.float32) for k in range(num_means)], axis=1)
-
-    return tf.transpose(tf.exp(-tf.pow(x - means, 2) / (2.0*tf.pow(stds, 2))))
-
-
-
-
 # init a grid of sqrt(k)xsqrt(k) plots
 plt.ion()
 fig = plt.figure(figsize=(10, 10))

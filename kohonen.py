@@ -47,8 +47,8 @@ data_num = len(train_data)
 batch_num = 10000
 side = 28
 output_channels = 64
-epochs = 30
-learning_rate = 0.01
+epochs = 50
+initial_learning_rate = 0.01
 
 #------------------------------------------------------------------------------
 # main
@@ -58,7 +58,11 @@ with graph.as_default():
     
     # input vector and weights 
     x = tf.placeholder(tf.float32, (batch_num, side*side))
+    # deviation of the neighborhood
     deviation = tf.placeholder(tf.float32, ())
+    # learning_rate
+    learning_rate = tf.placeholder(tf.float32, ())
+    # weights
     W = tf.get_variable("W", (side*side, output_channels), 
             initializer=tf.random_normal_initializer(stddev=0.05))
     
@@ -86,9 +90,11 @@ with graph.as_default():
         try:
             for epoch in range(epochs):
                 
-                # decaying deviation - at each batch deviation is lower
+                # decaying deviation 
                 curr_deviation = (output_channels/4.0)*np.exp(-epoch/float(epochs/4.0))
-                
+                # decaying learning rate 
+                curr_learning_rate = initial_learning_rate*np.exp(-epoch/float(epochs/4.0))
+            
                 # run a batch of train steps 
                 elosses = []
                 for batch in range(data_num//batch_num):
@@ -101,7 +107,7 @@ with graph.as_default():
                     loss_, _ = session.run([loss, train],
                             feed_dict={
                                 x: train_data[batch * batch_num : (batch + 1) * batch_num ,:],
-                                deviation: curr_deviation})
+                                deviation: curr_deviation, learning_rate: curr_learning_rate})
                     elosses.append(loss_)
 
                 losses.append(np.mean(elosses))

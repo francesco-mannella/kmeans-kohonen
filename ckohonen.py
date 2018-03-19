@@ -45,13 +45,13 @@ shutil.rmtree("MNIST-data")
 # parameters
 
 data_num = len(train_data)
-batch_num = 10000
+batch_num = 1000
 side = 28
 filter_side = 5
 input_channels = 1
-output_channels = 16
-epochs = 50
-learning_rate = 0.01
+output_channels = 64
+epochs = 100
+initial_learning_rate = 0.01
 train_data = train_data.reshape(data_num, side, side, 1)
 test_data = train_data.copy()
 np.random.shuffle(test_data)
@@ -66,14 +66,16 @@ with graph.as_default():
     x = tf.placeholder(tf.float32, (None, side, side, 1))
     # deviation of the neighborhood
     deviation = tf.placeholder(tf.float32, ())
+    # learning_rate
+    learning_rate = tf.placeholder(tf.float32, ())
     # tensor of weight filters
     W = tf.get_variable("W", (filter_side, filter_side, input_channels, output_channels), 
             initializer=tf.random_normal_initializer(stddev=0.002))
   
     # Each filter in the convolution can be viewed as a prototipe to optimize so that its
     # euclidean distance with the patches is minimized. 
-    # to easy the computations we use thevregularized weighted sum as a measure that is 
-    # inversely proportional to the euclidean distance    w*patch - 0.5*trace(w*w^T) 
+    # to easy the computations we use the regularized weighted sum as a measure that is 
+    # inversely proportional to the euclidean distance:   w*patch - 0.5*trace(w*w^T) 
     weighted_sums = tf.nn.conv2d(input=x, filter=W, strides=[1,1,1,1], padding="SAME") 
     wtraces = tf.map_fn(lambda w:  tf.trace(tf.matmul(w, tf.transpose(w))),  tf.transpose(tf.squeeze(W), [2, 0, 1]) )
     norms = weighted_sums - 0.5*tf.reshape(wtraces, [1, 1, 1, output_channels])
@@ -91,8 +93,10 @@ with graph.as_default():
         try:
             for epoch in range(epochs):
                 
-                # decaying deviation - at each batch deviation is lower
+                # decaying deviation 
                 curr_deviation = (output_channels/4.0)*np.exp(-epoch/float(epochs/4.0))
+                # decaying learning rate 
+                curr_learning_rate = initial_learning_rate*np.exp(-epoch/float(epochs/4.0))
             
                 # run a batch of train steps 
                 elosses = []
@@ -104,7 +108,8 @@ with graph.as_default():
                     
                     print epoch, batch
                     current_batch = train_data[batch * batch_num : (batch + 1) * batch_num ,:]
-                    loss_, _ = session.run([loss, train], feed_dict={x: current_batch, deviation: curr_deviation})
+                    loss_, _ = session.run([loss, train], feed_dict={x: current_batch, 
+                        deviation: curr_deviation, learning_rate: curr_learning_rate})
                     elosses.append(loss_)
 
                 losses.append(np.mean(elosses))
@@ -136,7 +141,7 @@ with graph.as_default():
         mino = np.min(weighted_sums_)
         maxo = np.max(weighted_sums_)
         weighted_sums_ = weighted_sums_/(maxo-mino) - mino
-        fig = plt.figure(figsize=(16, 6))
+        fig = plt.figure(figsize=(64,6))
         for q in range(n_tests):
             for i in range(output_channels): 
                     p = 2*(output_channels*q + i)

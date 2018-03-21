@@ -45,7 +45,7 @@ shutil.rmtree("MNIST-data")
 # parameters
 
 data_num = len(train_data)
-batch_num = 1000
+batch_num = 10000
 side = 28
 filter_side = 5
 input_channels = 1
@@ -96,7 +96,7 @@ with graph.as_default():
                 # decaying deviation 
                 curr_deviation = (output_channels/4.0)*np.exp(-epoch/float(epochs/4.0))
                 # decaying learning rate 
-                curr_learning_rate = initial_learning_rate*np.exp(-epoch/float(epochs/4.0))
+                curr_learning_rate = initial_learning_rate #*np.exp(-epoch/float(epochs/4.0))
             
                 # run a batch of train steps 
                 elosses = []

@@ -47,7 +47,7 @@ data_num = len(train_data)
 batch_num = 10000
 side = 28
 output_channels = 64
-epochs = 50
+epochs = 1002
 initial_learning_rate = 0.01
 
 #------------------------------------------------------------------------------

@@ -1,7 +1,51 @@
 # -*- coding: utf-8 -*-
+import numpy as np
 import tensorflow as tf
 
-def get_neighb(num_centroids, win_centroids, stds=1.0):
+def gauss1D(mu, sigma, xdims): 
+    
+    # expand means to broadcast
+    shape = mu.get_shape()
+    dims = len(shape)  
+    mu = tf.expand_dims(tf.cast(mu, tf.float32), dims) 
+    mu_expanded = tf.tensordot( 
+            mu,
+            tf.ones([1, xdims], dtype=tf.float32),
+            [[dims], [0]])
+    # x axis for gaussian
+    x = tf.tensordot( 
+            mu*0 + 1.0, # we need a ones tensor with unknown dimension
+            tf.expand_dims(tf.range(xdims, dtype=tf.float32), 0),
+            [[dims], [0]])
+    
+    return tf.exp(-tf.pow(x - mu_expanded, 2) / (2.0*tf.pow(sigma, 2)))
+
+def gauss2D(mu, sigma, xdims): 
+    
+    side_dims = int(np.sqrt(xdims))
+
+    # expand means to broadcast
+    shape = mu.get_shape()
+    dims = len(shape)  
+    mu = tf.expand_dims(tf.cast(mu, tf.float32), dims) 
+    mu_expanded = tf.tensordot( 
+            mu, 
+            tf.ones([1, xdims], dtype=tf.float32),
+            [[dims], [0]])
+    #  original x axis for gaussian
+    x = tf.tensordot( 
+            mu*0 + 1.0, # we need a ones tensor with unknown dimension
+            tf.expand_dims(tf.range(xdims, dtype=tf.float32), 0), 
+            [[dims], [0]])
+    
+    X = x//side_dims
+    Y = x%side_dims
+    muX = mu_expanded//side_dims
+    muY = mu_expanded%side_dims
+
+    return tf.exp(-(tf.pow(X - muX, 2) + tf.pow(Y - muY, 2)) / (2.0*tf.pow(sigma, 2)))
+
+def get_neighb(num_centroids, win_centroids, stds=1.0, gauss=gauss1D):
     """
     Build the neighborhood gaussians around the winner units in the
     space of the output layer
@@ -15,22 +59,8 @@ def get_neighb(num_centroids, win_centroids, stds=1.0):
         a matrix where each row has a gaussian activation aaround the corrensponding winner centroid
 
     """
-
-    # expand means to broadcast
-    shape = win_centroids.get_shape()
-    dims = len(shape)  
-    wcent = tf.expand_dims(tf.cast(win_centroids, tf.float32), dims) 
-    win_centroids = tf.tensordot( 
-            wcent,
-            tf.ones([1, num_centroids], dtype=tf.float32),
-            [[dims], [0]])
-    # x axis for gaussian
-    x = tf.tensordot( 
-            wcent*0 + 1.0, # we need a ones tensor with unknown dimension
-            tf.expand_dims(tf.range(num_centroids, dtype=tf.float32), 0),
-            [[dims], [0]])
-
-    return tf.exp(-tf.pow(x - win_centroids, 2) / (2.0*tf.pow(stds, 2)))
-
+ 
+    res = gauss(win_centroids, stds, num_centroids) 
+    return res
     
                 

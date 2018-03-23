@@ -9,6 +9,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import neighborhood
 from neighborhood import get_neighb
 
 np.set_printoptions(suppress=True, precision=3, linewidth=999)
@@ -43,13 +44,42 @@ shutil.rmtree("MNIST-data")
 
 #------------------------------------------------------------------------------
 # parameters
+
 data_num = len(train_data)
-batch_num = 10000
+batch_num = 1000
 side = 28
 output_channels = 64
-epochs = 1002
-initial_learning_rate = 0.01
+epochs = 10
+initial_learning_rate = 0.2
 
+#------------------------------------------------------------------------------
+# plotting 
+
+def plots(W, session):
+    # plot weights
+
+    W_ = W.eval()  
+    minw = np.min(W_)
+    maxw = np.max(W_)
+    W_ = W_/(maxw-minw) - minw
+    fig = plt.figure(figsize=(10, 10))
+    kk = int(np.sqrt(output_channels))
+    for i in range(kk):
+        for j in range(kk):
+            p = i*kk + j
+            ax = fig.add_subplot(kk,kk, p+1)
+            ax.imshow(W_[:,p].reshape(side, side), vmin=0, vmax=1)
+            ax.set_axis_off()
+    fig.canvas.draw()
+    plt.savefig("weights.png")
+
+    # plot loss
+
+    plt.figure()
+    plt.plot(losses)
+    fig.canvas.draw()
+    plt.savefig("loss.png")
+            
 #------------------------------------------------------------------------------
 # main
 
@@ -76,7 +106,7 @@ with graph.as_default():
 
     # for each pattern a vectro indicating a gaussian around the winner prototipe
     wta = tf.argmin(norms, axis=1)
-    wta = get_neighb(output_channels, wta, deviation)
+    wta = get_neighb(output_channels, wta, deviation, neighborhood.gauss2D) 
     
     # the cost function is the summ of the distances from the winner prototipes
     loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 1), wta))
@@ -91,7 +121,7 @@ with graph.as_default():
             for epoch in range(epochs):
                 
                 # decaying deviation 
-                curr_deviation = (output_channels/4.0)*np.exp(-epoch/float(epochs/4.0))
+                curr_deviation = int(np.sqrt(output_channels))*np.exp(-epoch/float(epochs/4.0))
                 # decaying learning rate 
                 curr_learning_rate = initial_learning_rate*np.exp(-epoch/float(epochs/4.0))
             
@@ -103,7 +133,7 @@ with graph.as_default():
                     if curr_time >= sim_time:
                         raise TimeOverflow("No time left!")
                     
-                    print epoch, batch
+                    print "epoch:%4d       batch:%4d" % (epoch, batch)
                     loss_, _ = session.run([loss, train],
                             feed_dict={
                                 x: train_data[batch * batch_num : (batch + 1) * batch_num ,:],
@@ -111,32 +141,10 @@ with graph.as_default():
                     elosses.append(loss_)
 
                 losses.append(np.mean(elosses))
-        
+
+                plots(W, session)
+
         except TimeOverflow:
             
             print "Plotting partial results..."
 
-        # plot weights
-
-        W_ = W.eval()  
-        minw = np.min(W_)
-        maxw = np.max(W_)
-        W_ = W_/(maxw-minw) - minw
-        fig = plt.figure(figsize=(10, 10))
-        kk = int(np.sqrt(output_channels))
-        for i in range(kk):
-            for j in range(kk):
-                p = i*kk + j
-                ax = fig.add_subplot(kk,kk, p+1)
-                ax.imshow(W_[:,p].reshape(side, side), vmin=0, vmax=1)
-                ax.set_axis_off()
-        fig.canvas.draw()
-        plt.savefig("weights.png")
-
-        # plot loss
-
-        plt.figure()
-        plt.plot(losses)
-        fig.canvas.draw()
-        plt.savefig("loss.png")
-            

@@ -42,7 +42,6 @@ shutil.rmtree("MNIST-data")
 
 #------------------------------------------------------------------------------
 # parameters
-
 data_num = len(train_data)
 batch_num = 10000
 side = 28
@@ -54,6 +53,52 @@ learning_rate = 0.01
 train_data = train_data.reshape(data_num, side, side, 1)
 test_data = train_data.copy()
 np.random.shuffle(test_data)
+
+#------------------------------------------------------------------------------
+
+def plots():
+
+    # plot weights
+
+    W_ = W.eval()  
+    minw = np.min(W_)
+    maxw = np.max(W_)
+    W_ = W_/(maxw-minw) - minw
+    fig = plt.figure(figsize=(10, 10))
+    kk = int(np.sqrt(output_channels))
+    for i in range(kk):
+        for j in range(kk):
+            p = i*kk + j
+            ax = fig.add_subplot(kk,kk, p+1)
+            img = ax.imshow(W_[:,:,0,p], vmin=0, vmax=1)
+            ax.set_axis_off()
+    plt.savefig("weights.png")
+
+    # plot tests
+
+    n_tests = 3
+    weighted_sums_ = session.run(weighted_sums, feed_dict={x: test_data[:n_tests]})
+    mino = np.min(weighted_sums_)
+    maxo = np.max(weighted_sums_)
+    weighted_sums_ = weighted_sums_/(maxo-mino) - mino
+    fig = plt.figure(figsize=(16, 6))
+    for q in range(n_tests):
+        for i in range(output_channels): 
+                p = 2*(output_channels*q + i)
+                ax1 = fig.add_subplot(2*n_tests, output_channels, p+1)
+                ax1.imshow(test_data[q,:,:,0], vmin=0, vmax=1)
+                ax1.set_axis_off()
+                ax2 = fig.add_subplot(2*n_tests, output_channels, p+2)
+                ax2.imshow(weighted_sums_[q,:,:,i], vmin=0, vmax=1)
+                ax2.set_axis_off()
+    plt.savefig("weighted_sums")
+
+    # plot loss
+
+    plt.figure()
+    plt.plot(losses)
+    plt.savefig("loss.png")
+  
 
 #------------------------------------------------------------------------------
 # main
@@ -72,7 +117,10 @@ with graph.as_default():
     # to easy the computations we use the regularized weighted sum as a measure that is 
     # inversely proportional to the euclidean distance:   w*patch - 0.5*trace(w*w^T) 
     weighted_sums = tf.nn.conv2d(input=x, filter=W, strides=[1,1,1,1], padding="SAME") 
-    wtraces = tf.map_fn(lambda w:  tf.trace(tf.matmul(w, tf.transpose(w))),  tf.transpose(tf.squeeze(W), [2, 0, 1]) )
+    flatten_weights = tf.transpose(tf.reshape(W, [filter_side*filter_side, 
+                input_channels, output_channels]), [2,1,0])
+    trace = lambda w: tf.trace(tf.matmul(tf.transpose(w), w))
+    wtraces = tf.map_fn(trace, flatten_weights)
     norms = weighted_sums - 0.5*tf.reshape(wtraces, [1, 1, 1, output_channels])
 
     # maximixe the sum of the weighted sums of the winning protoptipe for each patch in each input
@@ -96,55 +144,17 @@ with graph.as_default():
                     if curr_time >= sim_time:
                         raise "No time left!"
                     
-                    print epoch, batch
+                    print "epoch:%4d       batch:%4d" % (epoch, batch)
                     current_batch = train_data[batch * batch_num : (batch + 1) * batch_num ,:]
                     loss_, _ = session.run([loss, train], feed_dict={x: current_batch})
                     elosses.append(loss_)
 
                 losses.append(np.mean(elosses))
+
+                plots()
         
         except TimeOverflow:
 
             print "Plotting partial results..."
-                
-        # plot weights
-
-        W_ = W.eval()  
-        minw = np.min(W_)
-        maxw = np.max(W_)
-        W_ = W_/(maxw-minw) - minw
-        fig = plt.figure(figsize=(10, 10))
-        kk = int(np.sqrt(output_channels))
-        for i in range(kk):
-            for j in range(kk):
-                p = i*kk + j
-                ax = fig.add_subplot(kk,kk, p+1)
-                img = ax.imshow(W_[:,:,0,p], vmin=0, vmax=1)
-                ax.set_axis_off()
-        plt.savefig("weights.png")
-
-        # plot tests
-
-        n_tests = 3
-        weighted_sums_ = session.run(weighted_sums, feed_dict={x: test_data[:n_tests]})
-        mino = np.min(weighted_sums_)
-        maxo = np.max(weighted_sums_)
-        weighted_sums_ = weighted_sums_/(maxo-mino) - mino
-        fig = plt.figure(figsize=(16, 6))
-        for q in range(n_tests):
-            for i in range(output_channels): 
-                    p = 2*(output_channels*q + i)
-                    ax1 = fig.add_subplot(2*n_tests, output_channels, p+1)
-                    ax1.imshow(test_data[q,:,:,0], vmin=0, vmax=1)
-                    ax1.set_axis_off()
-                    ax2 = fig.add_subplot(2*n_tests, output_channels, p+2)
-                    ax2.imshow(weighted_sums_[q,:,:,i], vmin=0, vmax=1)
-                    ax2.set_axis_off()
-        plt.savefig("weighted_sums")
-
-        # plot loss
-
-        plt.figure()
-        plt.plot(losses)
-        plt.savefig("loss.png")
-        
+          
+      

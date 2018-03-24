@@ -7,6 +7,7 @@ import shutil
 import time
 import argparse
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import numpy as np
 import tensorflow as tf
 from neighborhood import get_neighb, gauss2D
@@ -63,7 +64,7 @@ def plots(W, norms, Session):
 
     # plot weights
 
-    W_ = W.eval()  
+    W_ = W.eval() 
     print np.min(W_)
     print np.max(W_)
     fig = plt.figure(figsize=(10, 10))
@@ -79,18 +80,19 @@ def plots(W, norms, Session):
     # plot tests
 
     n_tests = 3
+    out_side = int(np.sqrt(output_channels))
     weighted_sums_ = session.run(norms, feed_dict={x: test_data[:n_tests]})
-    fig = plt.figure(figsize=(64,6))
+    mw = np.max(weighted_sums_)
+    fig = plt.figure(figsize=(21,7))
+    gs = gridspec.GridSpec(out_side, out_side*3)
     for q in range(n_tests):
-        for i in range(output_channels): 
-                p = 2*(output_channels*q + i)
-                ax1 = fig.add_subplot(2*n_tests, output_channels, p+1)
-                ax1.imshow(np.squeeze(test_data[q,:,:,0]))
+        for i in range(out_side): 
+            for j in range(out_side): 
+                p = out_side*i + j
+                ax1 = fig.add_subplot(gs[i,q*out_side + j])
+                ax1.imshow(np.squeeze(weighted_sums_[q,:,:,p]),vmin=0, vmax=mw)
                 ax1.set_axis_off()
-                ax2 = fig.add_subplot(2*n_tests, output_channels, p+2)
-                ax2.imshow(np.squeeze(weighted_sums_[q,:,:,i]))
-                ax2.set_axis_off()
-    plt.savefig("weighted_sums")
+    plt.savefig("weighted_sums.png")
 
     # plot loss
     

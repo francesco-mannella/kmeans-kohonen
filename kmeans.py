@@ -65,6 +65,8 @@ with graph.as_default():
         losses = []
         
         for epoch in range(epochs):
+                
+            np.random.shuffle(train_data)
             
             # run a batch of train steps 
             elosses = []

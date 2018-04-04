@@ -40,10 +40,10 @@ def gauss2D(mu, sigma, xdims):
     
     X = x//side_dims
     Y = x%side_dims
-    muX = mu_expanded//side_dims
-    muY = mu_expanded%side_dims
+    muX = mu_expanded // side_dims
+    muY = mu_expanded % side_dims
 
-    return tf.exp(-(tf.pow(X - muX, 2) + tf.pow(Y - muY, 2)) / (2.0*tf.pow(sigma, 2)))
+    return  tf.exp(-(tf.pow(X - muX, 2) + tf.pow(Y - muY, 2)) / (2.0*tf.pow(sigma, 2)))
 
 def get_neighb(num_centroids, win_centroids, stds=1.0, gauss=gauss1D):
     """
@@ -63,4 +63,24 @@ def get_neighb(num_centroids, win_centroids, stds=1.0, gauss=gauss1D):
     res = gauss(win_centroids, stds, num_centroids) 
     return res
     
-                
+
+if __name__ == "__main__":
+
+    import matplotlib.pyplot as plt
+
+    session = tf.InteractiveSession()
+   
+    m = tf.placeholder(tf.float32, (2,))
+    s = tf.placeholder(tf.float32, ())
+    
+    o = get_neighb(20*20, m, s, gauss2D)
+
+    m_ = np.linspace(0, 20*20, 2)
+    s_ = 1 
+    o_ = session.run(o, feed_dict={m:m_, s:s_}) 
+
+    print o_.shape
+    for u in o_:
+        plt.imshow(u.reshape(20,20))
+        plt.show()
+

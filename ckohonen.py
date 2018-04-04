@@ -140,6 +140,8 @@ with graph.as_default():
         try:
             for epoch in range(epochs):
                 
+                np.random.shuffle(train_data)
+                
                 # decaying deviation 
                 curr_deviation = int(np.sqrt(output_channels))*np.exp(-epoch/float(epochs/4.0))
                 # decaying learning rate 

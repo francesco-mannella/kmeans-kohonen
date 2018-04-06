@@ -155,7 +155,7 @@ A kohonen map can be viewed as a version of the k-means algorithm in which the s
 			
 
 
-## Code 
+## Further codes 
 * ***[kmeans.py](kmeans.py)*** tensorflow implementation of kmeans. Used for the clustering of the [MNIST](https://en.wikipedia.org/wiki/MNIST_database) dataset
 * ***[kohonen.py](kohonen.py)*** tensorflow implementation of kohonen. Used for the clustering of the [MNIST](https://en.wikipedia.org/wiki/MNIST_database) dataset
 

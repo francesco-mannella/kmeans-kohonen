@@ -75,7 +75,7 @@ class SOM(object):
         rk = tf.argmin(norms, axis=1)
         
         # the cost function is the summ of the distances from the winner prototipes
-        self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 1), tf.gather(self.phis, rk)))
+        self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2), tf.gather(self.phis, rk)))
 
         # gradient descent
         self.train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)

@@ -14,13 +14,15 @@ The cost function to minimize is just the sum of the squared distances of the da
 ### Toy example:
 
     dataset
-
+    
+    # each row is a pattern 
     x =  [[1.0, 0.0, 0.0],
           [0.0, 1.0, 0.0],
           [0.0, 0.0, 1.0]]
            
     initial weights
-
+    
+    # each row is a prototype 
     c = [[0.02, 0.01, 0.03],
          [0.01, 0.04, 0.07],
          [0.09, 0.02, 0.02]]

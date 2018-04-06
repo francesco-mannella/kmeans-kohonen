@@ -35,7 +35,6 @@ for i in range(kk):
         plots.append(img)
 plt.show()
 
-
 graph = tf.Graph()
 with graph.as_default():
     

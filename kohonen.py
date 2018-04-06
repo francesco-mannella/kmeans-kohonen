@@ -1,128 +1,69 @@
 # -*- coding: utf-8 -*-
 
 ### imports
-import matplotlib
-matplotlib.use("Agg")
-import shutil
-import time
-import argparse
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-import neighborhood
-from neighborhood import get_neighb
 
-np.set_printoptions(suppress=True, precision=3, linewidth=999)
-
-#-------------------------------------------------------------------------------
-# set the simulation time 
-
-parser = argparse.ArgumentParser() 
-parser.add_argument('-t','--time',
-        help="Simulation time (sec)",
-        action="store", default=3600)  
-args = parser.parse_args()
-
-sim_time = int(args.time)
-start_time = time.time()
-
-class TimeOverflow(Exception):
-    pass
-
-#-------------------------------------------------------------------------------
-# only current needed GPU memory
-
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-
-#-------------------------------------------------------------------------------
-# load MNIST dataset
-
-mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-train_data = mnist.train.images # Returns np.array
-shutil.rmtree("MNIST-data")
 
 #------------------------------------------------------------------------------
-# parameters
+# utils
 
-data_num = len(train_data)
-batch_num = 1000
-side = 28
-output_channels = 20*20
-epochs = 60
-initial_learning_rate = 0.2
+def tf_flatten(x):
+    dim = tf.reduce_prod(x.shape)
+    return tf.reshape(x, (dim,))
 
 #------------------------------------------------------------------------------
-# plotting 
-
-def plots(W, losses, out_sampling, session):
-    # plot weights
-
-    W_ = W.eval()  
-    minw = np.min(W_)
-    maxw = np.max(W_)
-    W_ = W_/(maxw-minw) - minw
-    fig = plt.figure(figsize=(10, 10))
-    kk = int(np.sqrt(output_channels))
-    for i in range(kk):
-        for j in range(kk):
-            p = i*kk + j
-            ax = fig.add_subplot(kk,kk, p+1)
-            ax.imshow(W_[:,p].reshape(side, side), vmin=0, vmax=1)
-            ax.set_axis_off()
-    fig.canvas.draw()
-    plt.savefig("weights.png")
-
-    # plot loss
-
-    plt.figure()
-    plt.plot(losses)
-    fig.canvas.draw()
-    plt.savefig("loss.png")
-
-
-    fig = plt.figure()
-    num_sampling = len(out_sampling)
-    rows_sampling = num_sampling//10
-    cols_sampling = 10
-    for k in range(num_sampling):
-        ax = fig.add_subplot(rows_sampling, cols_sampling, k+1)
-        ax.imshow(out_sampling[k])
-        ax.set_axis_off()
-    fig.canvas.draw()
-    plt.savefig("out.png")
-
-#------------------------------------------------------------------------------
-# som
+# SOM
 
 class SOM(object):
+    """
+    Self Organizing map.
+
+    Optimization Reduce the distance of the input patterns from the weights of the output units.
+    Only those weights prototipes tha are currently the nearest to an input pattern (and their neighborhood)
+    are recruited for optimization.
+
+    Optimization is based on a generalization of the kmeans cost function.
+    """
 
     def __init__(self, input_channels, output_channels, batch_num):
+        """
+        :param input_channels: length of input patterns
+        :param output_channels: length of the vector of output units
+        :batch_num: number of patterns presented in a single batch
+        """
         
         self.input_channels = input_channels
         self.output_channels = output_channels
         self.batch_num = batch_num
-        self.side = int(np.sqrt(input_channels))
         self.out_side = int(np.sqrt(output_channels))
-
+        
         
         # input vector and weights 
-        self.x = tf.placeholder(tf.float32, (batch_num, self.side*self.side))
+        self.x = tf.placeholder(tf.float32, (batch_num, self.input_channels))
         # deviation of the neighborhood
         self.deviation = tf.placeholder(tf.float32, ())
+        self.curr_deviation = 0.5
         # learning_rate
         self.learning_rate = tf.placeholder(tf.float32, ())
         # weights
-        self.W = tf.get_variable("W", (self.side*self.side, output_channels), 
-            initializer=tf.random_normal_initializer(stddev=0.05))
+        self.W = tf.get_variable("W", (self.input_channels, output_channels), 
+            initializer=tf.random_normal_initializer(stddev=0.01))
+        
+        self.phis = self.get_phis(self.output_channels, self.deviation)
+        self.minimal_phi_dev = 0.005
 
         self.graph_model()
 
     def graph_model(self):
+        """
+        Build the tensorflow graph of the computations
+        """
         
         # train
 
-        # broadcasting x(n,m)->(n,m,output_channels) and W(m,output_channels)->(n,m,output_channels)
+        # broadcasting x(n,m)->(n,m,output_channels) and 
+        #   W(m,output_channels)->(n,m,output_channels)
         xrep = tf.stack([self.x for j in range(self.output_channels)], 2) 
         wrep = tf.stack([self.W for j in range(self.batch_num)], 0) 
         
@@ -132,23 +73,32 @@ class SOM(object):
 
         # for each pattern a vectro indicating a gaussian around the winner prototipe
         rk = tf.argmin(norms, axis=1)
-        rk = get_neighb(self.output_channels, rk, self.deviation, neighborhood.gauss2D) 
         
         # the cost function is the summ of the distances from the winner prototipes
-        self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 1), rk))
+        self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 1), tf.gather(self.phis, rk)))
 
         # gradient descent
         self.train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
         # generate
-        self.out_means = tf.placeholder(tf.float32, (None,))
-        self.out_dev = tf.placeholder(tf.float32, ())
-        out = get_neighb(self.output_channels, self.out_means, 
-                self.out_dev, neighborhood.gauss2D) 
-        self.x_sampled = tf.matmul(out, tf.transpose(self.W))
-        self.x_sampled = tf.reshape(self.x_sampled, [-1, self.side, self.side])
-        
+        self.out_means = tf.placeholder(tf.float32, (None,2))
+        self.out_deviation = tf.placeholder(tf.float32, ()) 
+        self.out = self.get_phis(self.output_channels, 
+                self.minimal_phi_dev + self.out_deviation, self.out_means)
+
+        self.x_sampled = tf.matmul(self.out, tf.transpose(self.W))
+     
     def train_step(self, batch, dev ,lr, session):
+        """
+        A single batch of computations for optimization
+
+        :param batch: a tensor with the current input patterns
+        :param dev: current standard deviation of the neighborhood
+                distribution in the output layer
+        :param lr: current learning rate
+        
+        :returns: current loss value
+        """
         
         loss_, _ = session.run([self.loss, self.train],
                 feed_dict={
@@ -157,70 +107,45 @@ class SOM(object):
                     self.learning_rate: lr})
         return loss_
     
-    def generative_step(self, means, dev, session):
+    def generative_step(self, means, session):
+        """
+        Generation of new patterns
         
-        generated_patterns = session.run(self.x_sampled,
-                feed_dict={self.out_means: means, self.out_dev: dev})
-        out_side = int(np.sqrt(self.output_channels))
+        :params means: a tensor of points in the output domain 
+            from which the patterns are generated
+
+        :returns: a tensor of generated patterns
+
+        """
+        generated_patterns = session.run(self.x_sampled, 
+                feed_dict={self.out_means: means, 
+                    self.out_deviation: self.curr_deviation})
         return generated_patterns
     
+    def get_phis(self, bins=100, sigma=0.1, means=None, dtype="float32"):
+        """
+        Builds a set of radial bases
 
-#------------------------------------------------------------------------------
-# main
+        :param bins: how many bins the domain will be divided into 
+        :param sigma: the std deviation of each radial basis
+        :param means: the means of the radial bases. The number of means indicates 
+                the number of bases. If None the means correspondst to the bins
 
-graph = tf.Graph()
-with graph.as_default():
-    
+        :returns: a tensor of radial bases
+        """
 
-    som = SOM(side*side, output_channels, batch_num)    
+        side = int(np.sqrt(bins))
+        x = tf.lin_space(0.0, 1.0, side)
+        X, Y = tf.meshgrid(x,x)
+        centroids = tf.transpose(tf.stack([tf_flatten(X), tf_flatten(Y)]))
+        if means is None:
+            means = tf.identity(centroids)
+        means_dim = means.get_shape().as_list()[0] 
+        means_dim = means_dim if means_dim is not None else -1
 
-    with tf.Session(config=config) as session:
-        tf.global_variables_initializer().run()
-        losses = []
+        dist = tf.reshape(means, (means_dim, 1, 2)) - \
+               tf.reshape(centroids, (1, bins, 2))
+        phis = tf.exp(-((sigma*2.0)**-1)*tf.pow(tf.norm(dist, axis=2),2))
+        return phis
 
-        try:
-
-            # train
-
-            for epoch in range(epochs):
-                
-                np.random.shuffle(train_data)
-                
-                # decaying deviation 
-                curr_deviation = int(np.sqrt(output_channels))*np.exp(-epoch/float(epochs/6.0))
-                # decaying learning rate 
-                curr_learning_rate = initial_learning_rate*np.exp(-epoch/float(epochs/6.0))
-            
-
-                # run a batch of train steps 
-                elosses = []
-                for batch in range(data_num//batch_num):
-
-                    curr_time = time.time() - start_time
-                    if curr_time >= sim_time:
-                        raise TimeOverflow("No time left!")
-                    
-                    print "epoch:%4d       batch:%4d" % (epoch, batch)
-                    
-                    curr_batch =  train_data[batch * batch_num : (batch + 1) * batch_num ,:]
-                    
-                    loss_ = som.train_step(curr_batch, curr_deviation, curr_learning_rate, session)
-
-                    elosses.append(loss_)
-
-                losses.append(np.mean(elosses))
-
-
-            # test
-            
-            g_means = np.random.uniform(0,som.output_channels-1, 100) 
-            g_dev = 0.1
-            out_sampling = som.generative_step(g_means, g_dev, session)
-            
-            plots(som.W, losses, out_sampling, session)
-
-
-        except TimeOverflow:
-            
-            print "Plotting partial results..."
 

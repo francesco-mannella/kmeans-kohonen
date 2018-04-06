@@ -55,7 +55,7 @@ with graph.as_default():
     wta = tf.one_hot(tf.argmin(norms, axis=1), k)
     
     # the cost function is the summ of the distances from the winner prototipes
-    loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 1), wta))
+    loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2), wta))
     # gradient descent
     train = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 

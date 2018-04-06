@@ -11,7 +11,7 @@ k-means algorithm:
 
 The cost function to minimize is just the sum of the squared distances of the dataset patterns from the related "winner" prototypes (nearest).
 
-### Toy example:
+### Toy example [(code)](kmeans-toy.py):
 
     dataset
     
@@ -91,7 +91,7 @@ The cost function to minimize is just the sum of the squared distances of the da
 A kohonen map can be viewed as a version of the k-means algorithm in which the squared distance selected to compute the cost function for each input pattern is not only the closest one but also a neighborhood of it in the layer of prototypes.
 
 
-### Toy example (same data of k-means):
+### Toy example (same data of k-means - see [code](kmeans-toy.py)):
 **iter 0**
 		
 		squared_distances:

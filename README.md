@@ -86,7 +86,7 @@ The cost function to minimize is just the sum of the squared distances of the da
 		 [0.09  0.01  0.998]]
 
 ## Kohonen map 
-A kohonen map can be viewed as a k-means algorithm in which the squared distance selected to compute the cost function for each input pattern is not only the closest one but also a neighborhood of it in the layer of prototipes.
+A kohonen map can be viewed as a version of the k-means algorithm in which the squared distance selected to compute the cost function for each input pattern is not only the closest one but also a neighborhood of it in the layer of prototipes.
 
 
 ### Toy example (same data of k-means):

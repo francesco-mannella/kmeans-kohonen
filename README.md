@@ -2,25 +2,27 @@
 The [k-means](https://goo.gl/6qvLx2) algorithm and the [kohonen self organizing map](https://goo.gl/8bNsh) are very closely related:
 
 ## K-means
-the k-means algorithm is based on optimizing the distance of the patterns in the dataset from k different prototipes.
+the k-means algorithm is based on optimizing the distance of the patterns in the dataset from k different prototypes.
 
 k-means algorithm:
 * **iterate**
-  * **E-step** Each pattern is matched over all prototipes. The nearest prototipe indicate the cluster to which the patter belongs 
-  * **M-step** The mean of the patterns in a cluster replaces the prototipe for that cluster 
+  * **E-step** Each pattern is matched over all prototypes. The nearest prototipe indicate the cluster to which the pattern belongs 
+  * **M-step** The mean of the patterns in a cluster replaces the prototypes for that cluster 
 
-The cost function to minimize is just the sum of the squared distances of the dataset patterns from the related "winner" prototipes (nearest).
+The cost function to minimize is just the sum of the squared distances of the dataset patterns from the related "winner" prototypes (nearest).
 
-### Toy example:
+### Toy example [(code)](kmeans-toy.py):
 
     dataset
-
+    
+    # each row is a pattern 
     x =  [[1.0, 0.0, 0.0],
           [0.0, 1.0, 0.0],
           [0.0, 0.0, 1.0]]
            
     initial weights
-
+    
+    # each row is a prototype 
     c = [[0.02, 0.01, 0.03],
          [0.01, 0.04, 0.07],
          [0.09, 0.02, 0.02]]
@@ -86,10 +88,10 @@ The cost function to minimize is just the sum of the squared distances of the da
 		 [0.09  0.01  0.998]]
 
 ## Kohonen map 
-A kohonen map can be viewed as a k-means algorithm in which the squared distance selected to compute the cost function for each input pattern is not only the closest one but also a neighborhood of it in the layer of prototipes.
+A kohonen map can be viewed as a version of the k-means algorithm in which the squared distance selected to compute the cost function for each input pattern is not only the closest one but also a neighborhood of it in the layer of prototypes.
 
 
-### Toy example (same data of k-means):
+### Toy example (same data of k-means - see [code](kmeans-toy.py)):
 **iter 0**
 		
 		squared_distances:

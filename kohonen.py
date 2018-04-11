@@ -67,14 +67,14 @@ class SOM(object):
         xrep = tf.stack([self.x for j in range(self.output_channels)], 2) 
         wrep = tf.stack([self.W for j in range(self.batch_num)], 0) 
         
-        # distances of the side*side inputs to the side*side weights
+        # distances of inputs to weights
         o = xrep - wrep
         norms =tf.norm(o, axis=1)
 
-        # for each pattern a vectro indicating a gaussian around the winner prototipe
+        # for each pattern a vector indicating a gaussian around the winner prototipe
         rk = tf.argmin(norms, axis=1)
-        
-        # the cost function is the summ of the distances from the winner prototipes
+ 
+        # the cost function is the sum of the distances from the winner prototipes
         self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2), tf.gather(self.phis, rk)))
 
         # gradient descent
@@ -88,7 +88,7 @@ class SOM(object):
 
         self.x_sampled = tf.matmul(self.out, tf.transpose(self.W))
      
-    def train_step(self, batch, dev ,lr, session):
+    def train_step(self, batch, dev , lr,  session):
         """
         A single batch of computations for optimization
 

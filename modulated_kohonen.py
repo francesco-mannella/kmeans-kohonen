@@ -26,7 +26,7 @@ class SOM(object):
     Optimization is based on a generalization of the kmeans cost function.
     """
 
-    def __init__(self, input_channels, output_channels, batch_num):
+    def __init__(self, input_channels, output_channels, batch_num, w_stddev=10.0):
         """
         :param input_channels: length of input patterns
         :param output_channels: length of the vector of output units
@@ -45,7 +45,7 @@ class SOM(object):
         self.learning_rate = tf.placeholder(tf.float32, ())
         # weights
         self.W = tf.get_variable("som_W", (self.input_channels, output_channels), 
-            initializer=tf.random_normal_initializer(stddev=0.05))
+            initializer=tf.random_normal_initializer(stddev=w_stddev))
         # modulation
         self.prob = tf.placeholder(tf.float32, [1, self.output_channels])
         self.out_means = tf.placeholder(tf.float32, (None,2))

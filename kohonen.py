@@ -17,13 +17,15 @@ def tf_flatten(x):
 
 class SOM(object):
     """
-    Self Organizing map.
-
-    Optimization Reduce the distance of the input patterns from the weights of the output units.
-    Only those weights prototipes tha are currently the nearest to an input pattern (and their neighborhood)
-    are recruited for optimization.
+    Self Organizing Map.
 
     Optimization is based on a generalization of the kmeans cost function.
+
+    Optimization Reduces the distance of the input patterns from the weights of
+    the output units.  Only those weights prototipes tha are currently the
+    nearest to an input pattern (and their neighborhood) are recruited for
+    optiization.
+
     """
 
     def __init__(self, input_channels, output_channels, batch_num):
@@ -39,25 +41,22 @@ class SOM(object):
         self.out_side = int(np.sqrt(output_channels))
         
         
+
+        #Build the tensorflow graph of the computations
+        
         # input vector and weights 
         self.x = tf.placeholder(tf.float32, (batch_num, self.input_channels))
         # deviation of the neighborhood
         self.deviation = tf.placeholder(tf.float32, ())
-        self.curr_deviation = 0.7
+        self.out_default_deviation = 0.7
         # learning_rate
         self.learning_rate = tf.placeholder(tf.float32, ())
         # weights
         self.W = tf.get_variable("W", (self.input_channels, output_channels), 
             initializer=tf.random_normal_initializer(stddev=1))
         
+        # radial bases of the output layer
         self.phis = self.get_phis(sigma=self.deviation)
-
-        self.graph_model()
-
-    def graph_model(self):
-        """
-        Build the tensorflow graph of the computations
-        """
         
         # train
 
@@ -79,7 +78,8 @@ class SOM(object):
         # gradient descent
         self.train = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
-        # generate
+        # generation graph
+
         self.out_means = tf.placeholder(tf.float32, (None,2))
         self.out_deviation = tf.placeholder(tf.float32, ()) 
         self.out = self.get_phis(self.out_means, self.out_deviation)
@@ -119,7 +119,7 @@ class SOM(object):
         """
         generated_patterns = session.run(self.x_sampled, 
                 feed_dict={self.out_means: means, 
-                    self.out_deviation: self.curr_deviation})
+                    self.out_deviation: self.out_default_deviation})
         return generated_patterns
     
     def get_phis(self, means=None, sigma=0.1, dtype="float32"):

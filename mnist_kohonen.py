@@ -45,7 +45,7 @@ shutil.rmtree("MNIST-data")
 # parameters
 
 data_num = len(train_data)
-batch_num = 1000
+batch_num = 500
 side = 28
 output_channels = 20*20
 epochs = 60
@@ -118,11 +118,10 @@ with graph.as_default():
                 np.random.shuffle(train_data)
                 
                 # decaying deviation 
-                curr_deviation = 0.5*np.exp(-epoch/float(epochs/6.0))
+                curr_deviation = 0.25*output_channels*np.exp(-epoch/float(epochs/6.0))
                 print curr_deviation
                 # decaying learning rate 
                 curr_learning_rate = initial_learning_rate*np.exp(-epoch/float(epochs/6.0))
-                som.curr_deviation = curr_deviation
 
                 # run a batch of train steps 
                 elosses = []
@@ -146,7 +145,7 @@ with graph.as_default():
                 if epoch % 2 == 0:
                     # test
                     
-                    g_means = np.random.uniform(0, 1, [100,2]) 
+                    g_means = np.random.uniform(0, 10, [100,2]) 
                     out_sampling = som.generative_step(g_means, session)
                     out_sampling = out_sampling.reshape(100, 28, 28)
                     plots(som.W, losses, out_sampling, session)

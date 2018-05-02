@@ -27,7 +27,7 @@ class SOM(object):
     optimization.
 
     Optimizations of the prototypes is also modulated globally by a given measure of 
-    the geneal performance of the map and locally by a measure of the performance of
+    the geneal modulationormance of the map and locally by a measure of the modulation of
     the single prototype. 
 
     """
@@ -60,10 +60,10 @@ class SOM(object):
             # weights
             self.W = tf.get_variable("som_W", (self.input_channels, output_channels), 
                 initializer=tf.random_normal_initializer(stddev=w_stddev))
-            # performance for modulation
-            self.perf = tf.placeholder(tf.float32, [1, self.output_channels])
-            # radial bases of the output layer based on performance measure
-            self.phis = self.get_phis(sigma=(1 - self.perf))
+            # modulationormance for modulation
+            self.modulation = tf.placeholder(tf.float32, [1, self.output_channels])
+            # radial bases of the output layer based on modulationormance measure
+            self.phis = self.get_phis(sigma=(self.modulation))
 
             # train graph
 
@@ -71,22 +71,19 @@ class SOM(object):
             #   W(m,output_channels)->(n,m,output_channels)
             xrep = tf.stack([self.x for j in range(self.output_channels)], 2) 
             wrep = tf.stack([self.W for j in range(self.batch_num)], 0) 
-            # local and global lack of performance
-            self.uncertainty = 1.0 - self.perf
-            self.uncert_mean = tf.reduce_mean(self.uncertainty)
+            # local and global lack of modulationormance
+            self.modulation_mean = tf.reduce_mean(self.modulation)
             # distances of inputs to weights
             o = xrep - wrep
             self.norms = tf.norm(o, axis=1)
             # for each pattern a vector indicating a gaussian
             # around the winner prototipe
             rk = tf.argmin(self.norms, axis=1)
-            phi_rk = tf.gather(tf.multiply(self.phis, 
-                self.uncertainty) * self.uncert_mean, rk)
+            phi_rk = tf.gather(tf.multiply(self.phis, self.modulation) * self.modulation_mean, rk)
             # the cost function is the sum of the distances from
             # the winner prototipes plus a further context
             # modulation
-            self.loss = tf.reduce_sum(tf.multiply(tf.pow(self.norms, 2), 
-                tf.multiply(phi_rk, self.uncertainty)))
+            self.loss = tf.reduce_sum(tf.multiply(tf.pow(self.norms, 2),  phi_rk)
             # gradient descent
             self.train = tf.train.AdamOptimizer(self.learning_rate).minimize(
                     self.loss, var_list=[self.W])
@@ -116,13 +113,13 @@ class SOM(object):
             self.prototype_outputs = tf.matmul(prototype_out_centroids, self.W, transpose_a=True)
 
             
-    def train_step(self, batch, lr, perf, session):
+    def train_step(self, batch, lr, modulation, session):
         """
         A single batch of computations for optimization
 
         :param batch: a tensor with the current input patterns
         :param lr: current learning rate
-        :param perf: an external performance surface
+        :param modulation: an external modulation surface
         
         :returns: current loss value
         """
@@ -131,7 +128,7 @@ class SOM(object):
                 feed_dict={
                     self.x: batch, 
                     self.learning_rate: lr,
-                    self.perf: perf})
+                    self.modulation: modulation})
         return norms_, loss_
     
     def generative_step(self, means, session):

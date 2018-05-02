@@ -93,23 +93,19 @@ class SOM(object):
             # placeholders to get the means and deviation to
             # generate from the output layer 
             self.gen_means = tf.placeholder(tf.float32, (None,2))
-            self.gen_deviation = tf.placeholder(tf.float32, ()) 
             # the initial value of the std deviation of the
             # output layer means for generation
             self.gen_default_deviation = .7
             # the resulting radial bases of the output
-            self.gen_phis = self.get_phis(self.gen_means, self.gen_deviation)
+            self.gen_phis = self.get_phis(self.gen_means, self.gen_default_deviation)
             # backprop radial bases to get the generated patterns
             self.x_sampled = tf.matmul(self.gen_phis, self.W, transpose_b=True)
-            # set the prototype bases
+            # set the prototype output bases
             X, Y = np.meshgrid(np.arange(self.output_side), np.arange(self.output_side))
             prototype_out_centroids = tf.constant(
                     np.vstack((X.ravel(), Y.ravel())).T.astype("float32"))
-            self.prototype_outputs =  self.get_phis(prototype_out_centroids, self.gen_default_deviation)
-
-            
-            #tf.matmul(prototype_out_centroids, self.W, transpose_a=True)
-
+            self.prototype_outputs =  self.get_phis(prototype_out_centroids, 
+                    self.gen_default_deviation)
             
     def train_step(self, batch, lr, modulation, session):
         """
@@ -142,8 +138,8 @@ class SOM(object):
 
         """
 
-        generated_patterns, gen_phis = session.run([self.x_sampled, self.gen_phis], feed_dict={
-            self.gen_means: means, self.gen_deviation: self.gen_default_deviation})
+        generated_patterns, gen_phis = session.run([self.x_sampled, self.gen_phis], 
+                feed_dict={self.gen_means: means})
 
         return generated_patterns, gen_phis
     

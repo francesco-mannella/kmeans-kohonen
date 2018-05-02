@@ -49,7 +49,6 @@ class SOM(object):
             self.batch_num = batch_num
             self.output_side = int(np.sqrt(output_channels))
             
-            
             # Build the tensorflow graph of the computations
             
             # main variables
@@ -92,7 +91,6 @@ class SOM(object):
             self.train = tf.train.AdamOptimizer(self.learning_rate).minimize(
                     self.loss, var_list=[self.W])
 
-
             # generative graph
 
             # placeholders to get the means and deviation to
@@ -109,15 +107,15 @@ class SOM(object):
             self.gen_phis = tf.where(
                     tf.not_equal(phi_sum, 0),
                     tf.divide(self.gen_phis, tf.expand_dims(phi_sum, 1)),
-                    self.gen_phis*0 + 1.0/float(self.output_channels)
-                    )
-            #TODO add case where phi_sum is zero
+                    self.gen_phis*0 + 1.0/float(self.output_channels))
             # backprop radial bases to get the generated patterns
             self.x_sampled = tf.matmul(self.gen_phis, self.W, transpose_b=True)
-            # weighted sum  of radial bases to get the patterns stddevs
-            self.x_sampled_dev = tf.matmul(self.gen_phis,
-                    self.perf*self.output_side, transpose_b=True)
-     
+            # set the prototype bases
+            X, Y = np.meshgrid(np.arange(self.output_side), np.arange(self.output_side))
+            prototype_out_centroids = np.vstack((X.ravel(), Y.ravel())).astype("float32")
+            self.prototype_outputs = tf.matmul(prototype_out_centroids, self.W, transpose_a=True)
+
+            
     def train_step(self, batch, lr, perf, session):
         """
         A single batch of computations for optimization
@@ -140,39 +138,19 @@ class SOM(object):
         """
         Generation of new patterns
         
-        :params means: a tensor of points in the output domain 
-            from which the patterns are generated
+        :params patterns: a tensor of points in the output domain 
+            from which the outputs are generated
+
+        :params gen_phis: the generated output (radial bases of the patterns)
 
         :returns: a tensor of generated patterns
 
         """
 
-        generated_patterns = session.run(self.x_sampled, feed_dict={
+        generated_patterns, gen_phis = session.run([self.x_sampled, self.gen_phis], feed_dict={
             self.gen_means: means, self.gen_deviation: self.gen_default_deviation})
 
-        return generated_patterns
-
-    def generative_devs_step(self, means, perf, session):
-        """
-        Generation of new patterns with standard deviations given by
-        an external performance surface
-        
-        :params means: a tensor of points in the output domain 
-            from which the patterns are generated
-        :param perf: an external performance surface
-
-        :returns: a tensor of generated patterns
-
-        """
-
-        generated_patterns, generated_patterns_devs, generated_phis = \
-                session.run([self.x_sampled, self.x_sampled_dev, self.gen_phis], 
-                feed_dict={
-                    self.gen_means: means, 
-                    self.gen_deviation: self.gen_default_deviation,
-                    self.perf: perf})
-
-        return generated_patterns, generated_patterns_devs, generated_phis
+        return generated_patterns, gen_phis
     
     def get_phis(self, means=None, sigma=0.1, dtype="float32"):
         """

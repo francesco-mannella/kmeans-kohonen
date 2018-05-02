@@ -83,7 +83,7 @@ class SOM(object):
             # the cost function is the sum of the distances from
             # the winner prototipes plus a further context
             # modulation
-            self.loss = tf.reduce_sum(tf.multiply(tf.pow(self.norms, 2),  phi_rk)
+            self.loss = tf.reduce_sum(tf.multiply(tf.pow(self.norms, 2),  phi_rk))
             # gradient descent
             self.train = tf.train.AdamOptimizer(self.learning_rate).minimize(
                     self.loss, var_list=[self.W])
@@ -99,18 +99,16 @@ class SOM(object):
             self.gen_default_deviation = .7
             # the resulting radial bases of the output
             self.gen_phis = self.get_phis(self.gen_means, self.gen_deviation)
-            # normalized radial bases
-            phi_sum = tf.reduce_sum(self.gen_phis, axis=1)
-            self.gen_phis = tf.where(
-                    tf.not_equal(phi_sum, 0),
-                    tf.divide(self.gen_phis, tf.expand_dims(phi_sum, 1)),
-                    self.gen_phis*0 + 1.0/float(self.output_channels))
             # backprop radial bases to get the generated patterns
             self.x_sampled = tf.matmul(self.gen_phis, self.W, transpose_b=True)
             # set the prototype bases
             X, Y = np.meshgrid(np.arange(self.output_side), np.arange(self.output_side))
-            prototype_out_centroids = np.vstack((X.ravel(), Y.ravel())).astype("float32")
-            self.prototype_outputs = tf.matmul(prototype_out_centroids, self.W, transpose_a=True)
+            prototype_out_centroids = tf.constant(
+                    np.vstack((X.ravel(), Y.ravel())).T.astype("float32"))
+            self.prototype_outputs =  self.get_phis(prototype_out_centroids, self.gen_default_deviation)
+
+            
+            #tf.matmul(prototype_out_centroids, self.W, transpose_a=True)
 
             
     def train_step(self, batch, lr, modulation, session):
@@ -171,6 +169,11 @@ class SOM(object):
         dist = tf.reshape(means, (means_dim, 1, 2)) - \
             tf.reshape(centroids, (1, self.output_channels, 2))
         phis = tf.exp(-0.5*(sigma**-2)*tf.pow(tf.norm(dist, axis=2),2))
+        # normalized radial bases
+        phi_sum = tf.reduce_sum(phis, axis=1)
+        phis = tf.where(tf.not_equal(phi_sum, 0),
+                tf.divide(phis, phi_sum),
+                phis*0 + 3.0/float(self.output_channels))
         return phis
 
 

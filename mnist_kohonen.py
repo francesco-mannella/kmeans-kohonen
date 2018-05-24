@@ -9,7 +9,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from kohonen import SOM
+from kohonen_new import SOM
 
 np.set_printoptions(suppress=True, precision=3, linewidth=999)
 
@@ -103,7 +103,7 @@ graph = tf.Graph()
 with graph.as_default():
     
 
-    som = SOM(side*side, output_channels, batch_num)    
+    som = SOM(side*side, output_channels, batch_num, w_stddev=0.02)    
 
     with tf.Session(config=config) as session:
         tf.global_variables_initializer().run()
@@ -125,8 +125,8 @@ with graph.as_default():
 
                 # run a batch of train steps 
                 elosses = []
-                for batch in range(data_num//batch_num):
 
+                for batch in range(data_num//batch_num):
                     curr_time = time.time() - start_time
                     if curr_time >= sim_time:
                         raise TimeOverflow("No time left!")
@@ -135,7 +135,8 @@ with graph.as_default():
                     
                     curr_batch =  train_data[batch * batch_num : (batch + 1) * batch_num ,:]
                     
-                    loss_ = som.train_step(curr_batch, curr_deviation, curr_learning_rate, session)
+                    _, loss_ = som.train_step(curr_batch, curr_learning_rate, 
+                            curr_deviation, session)
 
                     elosses.append(loss_)
 
@@ -146,7 +147,7 @@ with graph.as_default():
                     # test
                     
                     g_means = np.random.uniform(0, 10, [100,2]) 
-                    out_sampling = som.generative_step(g_means, session)
+                    out_sampling,_ = som.generative_step(g_means, session)
                     out_sampling = out_sampling.reshape(100, 28, 28)
                     plots(som.W, losses, out_sampling, session)
 

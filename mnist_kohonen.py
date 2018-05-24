@@ -9,7 +9,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-from kohonen_new import SOM
+from algs.kohonen import SOM
 
 np.set_printoptions(suppress=True, precision=3, linewidth=999)
 

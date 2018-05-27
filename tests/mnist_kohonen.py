@@ -9,6 +9,8 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import sys, os
+sys.path.insert(1, os.path.join(sys.path[0], '..')) 
 from algs.kohonen import SOM
 
 np.set_printoptions(suppress=True, precision=3, linewidth=999)
@@ -45,7 +47,7 @@ shutil.rmtree("MNIST-data")
 # parameters
 
 data_num = len(train_data)
-batch_num = 500
+batch_num = 2500
 side = 28
 output_channels = 20*20
 epochs = 60

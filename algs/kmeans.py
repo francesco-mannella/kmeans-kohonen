@@ -7,7 +7,7 @@ import tensorflow as tf
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 #-------------------------------------------------------------------------------
-np.set_printoptions(suppress=True, precision=3, linewidth=999)
+np.set_printoptions(suppress=True, precision=5, linewidth=999)
 #-------------------------------------------------------------------------------
 mnist = tf.contrib.learn.datasets.load_dataset("mnist")
 train_data = mnist.train.images # Returns np.array
@@ -43,9 +43,9 @@ with graph.as_default():
     W = tf.get_variable("W", (side*side, k), 
             initializer=tf.random_normal_initializer(stddev=0.05))
     
-    # broadcasting x(n,m)->(n,m,k) and W(m,k)->(n,m,k)
-    xrep = tf.stack([x for j in range(k)], 2) 
-    wrep = tf.stack([W for j in range(batch_num)], 0) 
+    # broadcasting x and W
+    xrep = tf.reshape(x, (batch_num, side*side, 1))
+    wrep = tf.reshape(W, (1, side*side, k))
     
     # distances of the side*side inputs to the side*side weights
     o = xrep - wrep

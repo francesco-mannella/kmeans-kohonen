@@ -72,8 +72,8 @@ class SOM(object):
             self.phis = self.get_phis(sigma=(self.deviation), normalize=False)
             # broadcasting x(n,m)->(n,m,output_channels) and 
             #   W(m,output_channels)->(n,m,output_channels)
-            xrep = tf.stack([self.x for j in range(self.output_channels)], 2) 
-            wrep = tf.stack([self.W for j in range(self.batch_num)], 0) 
+            xrep = tf.reshape(self.x, (batch_num, self.input_channels, 1))
+            wrep = tf.reshape(self.W, (1, self.input_channels, self.output_channels))
             # distances of inputs to weights
             o = xrep - wrep
             self.norms = tf.norm(o, axis=1)

@@ -32,7 +32,8 @@ def interp(grid, means, sigma=0.1, name="psis"):
         tf.reshape(grid, (1, grid_num, 2))
     
     phis = tf.exp(-0.5*(sigma**-2)*tf.pow(tf.norm(dist, axis=2),2))
-    phis = tf.divide(phis,tf.reshape(tf.reduce_sum(phis, axis=1), (means_num, 1)), name=name)
+    phis = tf.divide(phis,tf.reshape(tf.reduce_sum(phis, axis=1), 
+        (means_num, 1)), name=name)
     return phis
 
 #------------------------------------------------------------------------------
@@ -44,19 +45,20 @@ class SOM(object):
 
     Optimization is based on a generalization of the kmeans cost function.
 
-    Optimization Reduces the distance of the input patterns from the weights of
-    the output units. Only those weights prototipes tha are currently the
-    nearest to an input pattern (and their neighborhood) are recruited for
-    optimization.
+    Optimization Reduces the distance of the input patterns from the
+    weights of the output units. Only those weights prototipes tha are
+    currently the nearest to an input pattern (and their neighborhood) are
+    recruited for optimization.
 
-    Optimizations of the prototypes is also modulated globally by a given measure of 
-    the geneal modulationormance of the map and locally by a measure of the modulation of
-    the single prototype. 
+    Optimizations of the prototypes is also modulated globally by a given
+    measure of the geneal modulationormance of the map and locally by a
+    measure of the modulation of the single prototype. 
 
     """
 
     def __init__(self, input_channels, output_channels, batch_num, 
-            w_mean=0.0, w_stddev=0.03, min_modulation=0.0001, reproduct_deviation=0.7, scope="new_som"):
+            w_mean=0.0, w_stddev=0.03, min_modulation=0.0001, 
+            reproduct_deviation=0.7, scope="new_som"):
         """
         :param input_channels: length of input patterns
         :param output_channels: length of the vector of output units
@@ -79,56 +81,84 @@ class SOM(object):
             self.min_modulation = min_modulation
 
             # weights
-            self.W = tf.get_variable("som_W", (self.input_channels, self.output_channels), 
-                initializer=tf.random_normal_initializer(mean=self.w_mean, stddev=self.w_stddev))
+            self.W = tf.get_variable("som_W", (self.input_channels, 
+                self.output_channels), initializer=
+                tf.random_normal_initializer(mean=self.w_mean, 
+                    stddev=self.w_stddev))
             
             # centroid grid in the output space 
             self.centroids = tf.get_variable(name="centroids", 
                     shape=(self.output_channels, 2), dtype=tf.float32)
-            x = tf.range(self.output_side, dtype=tf.float32)
-            Y, X = tf.meshgrid(x,x)
-            tf.assign(self.centroids, tf.transpose(tf.stack([tf_flatten(X), 
-                tf_flatten(Y)])))
+            x = np.arange(self.output_side, dtype="float32")
+            Y, X = np.meshgrid(x,x)
+            self.centroids = tf.constant(np.vstack([X.ravel(), 
+                Y.ravel()]).T, name="centroids")
             
-            self.prototype_outputs = self.get_phis(self.centroids, self.reproduct_deviation)
+            self.prototype_outputs = self.get_phis(self.centroids, 
+                    self.reproduct_deviation)
             
-    def spreading_graph(self, x, modulation):
+    def spreading_graph(self, x):
         """
-            :param x: 2D Tensor (dtype=tf.float32, shape=(batch_num, self.input_channels)
-            :param modulation: 2D Tensor (dtype=tf.float32, (1, self.output_channels)) 
+            :param x: 2D Tensor (dtype=tf.float32, shape=(batch_num, 
+                        self.input_channels)
         """
         
         with tf.variable_scope(self.scope):
 
-            # local and global lack of modulationormance
-            self.modulation_mean = tf.reduce_mean(modulation, name="modulation_mean")
-            # radial bases of the output layer based on modulation measure
-            self.modulation_phis = self.get_phis(self.centroids, sigma=(modulation + self.min_modulation))
-            
             # spreading 
             # broadcasting x and W 
-            xrep = tf.reshape(self.x, (self.batch_num, self.input_channels, 1))
-            wrep = tf.reshape(self.W, (1, self.input_channels, self.output_channels))
+            xrep = tf.reshape(x, (self.batch_num, self.input_channels, 1))
+            wrep = tf.reshape(self.W, (1, self.input_channels, 
+                self.output_channels))
             # distances of inputs from weights
             o = xrep - wrep
             self.norms = tf.norm(o, axis=1, name="norms")
-            # for each pattern a vector indicating a gaussian around the winner prototipe
+            # for each pattern a vector indicating a gaussian around 
+            #    the winner prototipe
             rk = tf.argmin(self.norms, axis=1, name="rk")
-            self.neighbour = tf.gather(self.modulation_phis, rk, name="neighbour")
-
-
-            # do the modulation
-            self.phi_rk = self.modulate_neighbour(modulation)
 
             # real outputs
-            outs = tf.transpose(tf.stack((rk/self.output_side, rk%self.output_side)))
+            outs = tf.transpose(tf.stack((rk/self.output_side, 
+                rk%self.output_side)))
             outs = tf.cast(outs, tf.float32)
-            self.out_psis = interp(self.centroids, outs, self.reproduct_deviation, name="out_psis")
+            self.out_psis = interp(self.centroids, outs,
+                    self.reproduct_deviation, name="out_psis")
 
-        return self.norms, self.phi_rk, self.out_psis
+        return self.norms, rk, self.out_psis
     
-    def training_graph(self, learning_rate):
+    def modulation_graph(self, modulation, rk):
         """
+            :param modulation: 2D Tensor (dtype=tf.float32, 
+                                (1, self.output_channels)) 
+            :param rk: 1D Tensor (dtype=tf.float32, shape=(batch_num,))
+        """
+        with tf.variable_scope(self.scope):
+
+            # local and global lack of modulation
+            self.modulation_mean = tf.reduce_mean(modulation, 
+                    name="modulation_mean")
+            
+            # radial bases of the output layer based on modulation measure
+            self.modulation_phis = self.get_phis(self.centroids, 
+                    sigma=(modulation + self.min_modulation))
+            
+            # The overall learning rate is linked to the modulation mean
+            #self.modulation_phis = self.modulation_mean*self.modulation_phis
+            self.modulation_phis = self.modulation_phis
+            
+            # do the modulation
+            self.neighbour = tf.gather(self.modulation_phis, rk,
+                    name="neighbour")
+            self.phi_rk = self.modulate_neighbour(modulation)
+
+        return self.phi_rk
+
+    def training_graph(self, norms, modulated_rk, learning_rate):
+        """
+            :param norms: 2D Tensor (dtype=tf.float32, shape=(batch_num,
+                            output_channels))
+            :param modulated_rk: 1D Tensor (dtype=tf.float32, 
+                            shape=(batch_num, output_channels))
             :param learning_rate: 0D Tensor (dtype=tf.float32)
         """
 
@@ -136,11 +166,14 @@ class SOM(object):
             
             # the cost function is the sum of the distances from
             #   the winner prototipes plus a further context modulation
-            self.loss = tf.reduce_sum(tf.multiply(tf.pow(self.norms, 2),  self.phi_rk), name="loss")
+            self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2),  
+                modulated_rk), name="loss")
             # gradient descent
             self.train = tf.train.AdamOptimizer(
                     learning_rate).minimize(
                     self.loss, var_list=[self.W], name="Gradient")
+
+        return self.loss, self.train
 
     def reproduction_graph(self, means):
         """
@@ -152,8 +185,10 @@ class SOM(object):
             # the resulting radial bases of the output
             self.reproduction_psis = interp(self.centroids, means, 
                     self.reproduct_deviation, name="reproduction_psis")
+
             # backprop radial bases to get the generated patterns
-            self.x_sampled = tf.matmul(self.reproduction_psis, self.W, transpose_b=True) 
+            self.x_sampled = tf.matmul(self.reproduction_psis,
+                    self.W, transpose_b=True) 
         
         return self.x_sampled, self.reproduction_psis
 
@@ -182,9 +217,6 @@ class SOM(object):
         phis = tf.exp(-0.5*(sigma**-2)*tf.pow(tf.norm(dist, axis=2),2))
 
         return phis
-
-
-
     
     def generate_closed_graph(self):
 
@@ -199,8 +231,9 @@ class SOM(object):
             self.reproduction_means = tf.placeholder(dtype=tf.float32, 
                     shape=(None, 2))
 
-        self.spreading_graph(self.x, self.modulation)
-        self.training_graph(self.learning_rate)
+        norms, rk, _ = self.spreading_graph(self.x)
+        modulated_phi_rk = self.modulation_graph(self.modulation, rk)
+        self.training_graph(norms, modulated_phi_rk, self.learning_rate)
         self.reproduction_graph(self.reproduction_means)
 
     def train_step(self, batch, lr, modulation, session):

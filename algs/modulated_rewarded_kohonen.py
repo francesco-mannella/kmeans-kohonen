@@ -17,17 +17,30 @@ class RewSOM(SOM):
 
     """
 
-    def __init__(self, *args, **kargs):
-        
+    def modulation_graph(self, rew , *args, **kargs):
 
-        self.rew = tf.placeholder(tf.float32, [None, 1], name="reward")
+        modulated_phi_rk = super(RewSOM, self).modulation_graph(*args, **kargs)
+        return tf.multiply(rew, modulated_phi_rk, name="rew_phi_rk") 
 
-        super(RewSOM, self).__init__(*args, **kargs)
+    def generate_closed_graph(self):
 
-    def modulate_neighbour(self):
+        with tf.variable_scope(self.scope):
 
-        modulated_phi_rk = super(RewSOM, self).modulate_neighbour()
-        return tf.multiply(self.rew, modulated_phi_rk, name="mod_phi_rk") 
+            self.x = tf.placeholder(dtype=tf.float32, 
+                    shape=(self.batch_num, self.input_channels), name="x")
+            self.rew = tf.placeholder(idtype=tf.float32, 
+                    shape=(None, 1), name="reward")
+            self.modulation = tf.placeholder(dtype=tf.float32, 
+                    shape=(1, self.output_channels), name="modulation") 
+            self.learning_rate =tf.placeholder(dtype=tf.float32, shape=())
+            
+            self.reproduction_means = tf.placeholder(dtype=tf.float32, 
+                    shape=(None, 2))
+
+        norms, rk, _ = self.spreading_graph(self.x)
+        rew_phi_rk = self.modulation_graph(self.rew, self.modulation, rk) 
+        self.training_graph(norms, rew_phi_rk, self.learning_rate)
+        self.reproduction_graph(self.reproduction_means)
 
 
     def train_step(self, batch, lr, modulation, rew,  session):

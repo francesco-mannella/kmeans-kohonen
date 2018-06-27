@@ -59,8 +59,8 @@ if not os.path.exists("frames"): os.makedirs("frames")
 input_num = 2
 output_num = 100
 output_side = int(np.sqrt(output_num))
-batch_num = 2000
-epochs = 2000
+batch_num = 500
+epochs = 3000
 
 som_learning_rate = 0.03
 rep_deviation = 0.7
@@ -69,11 +69,13 @@ x = np.arange(float(output_side))
 X, Y = np.meshgrid(x, x)
 means = np.vstack((Y.ravel(), X.ravel())).T
 theta = np.pi*0.25
-rot = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), np.cos(theta)]])
+rot = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), 
+    np.cos(theta)]])
 rotated = np.dot(means - output_side/2., rot)
 rotated += output_side/2.
 
-dists = np.linalg.norm(means.reshape(output_num, 1, 2) - rotated.reshape(1, output_num, 2), axis=2)
+dists = np.linalg.norm(means.reshape(output_num, 1, 2) - 
+        rotated.reshape(1, output_num, 2), axis=2)
 centroids = gauss(dists, rep_deviation)
 
 #------------------------------------------------------------------------------
@@ -120,14 +122,14 @@ with graph.as_default():
 
             curr_target_idx = (epoch%output_num)*np.ones(batch_num).astype(int)
             idx = target_idcs[curr_target_idx]
-            curr_means = means[idx]/10.0 - 0.5
+            curr_means =( means[idx]/10.0 - 0.5)
             curr_out = rotated[idx]/10.0 - 0.5
 
-            curr_data = 0.02*np.random.randn(batch_num, 2) + curr_means
+            curr_data = 0.15*np.random.randn(batch_num, 2) + curr_means
             
             norms, outs , loss_ = ssom.train_step(
                     curr_data, 
-                    som_learning_rate*np.exp(-epoch/(epochs*0.075)),
+                    som_learning_rate*np.exp(-epoch/(epochs*0.07)),
                     centroids[idx[0]].reshape(1, output_num),
                     session)
             

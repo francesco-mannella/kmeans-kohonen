@@ -1,0 +1,12 @@
+**/*.pyc
+**/*.out
+**/*.log
+**/*.bbl
+**/*.aux
+**/*.png
+**/*.gif
+**/*_sources
+**/*_checkpoints
+frames
+tb
+

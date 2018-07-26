@@ -12,7 +12,7 @@ def tf_flatten(x):
     dim = tf.reduce_prod(x.shape)
     return tf.reshape(x, (dim,))
     
-def interp(grid, means, sigma=0.1, name="psis"):
+def interp(grid, means, sigma=0.1, name="psis", standardize=True):
     """
     Builds a set of radial bases
 
@@ -32,8 +32,9 @@ def interp(grid, means, sigma=0.1, name="psis"):
         tf.reshape(grid, (1, grid_num, 2))
     
     phis = tf.exp(-0.5*(sigma**-2)*tf.pow(tf.norm(dist, axis=2),2))
-    phis = tf.divide(phis,tf.reshape(tf.reduce_sum(phis, axis=1), 
-        (means_num, 1)), name=name)
+    if standardize == True:
+        phis = tf.divide(phis,tf.reshape(tf.reduce_sum(phis, axis=1), 
+            (means_num, 1)), name=name)
     return phis
 
 #------------------------------------------------------------------------------
@@ -57,13 +58,16 @@ class SOM(object):
     """
 
     def __init__(self, input_channels, output_channels, batch_num, 
-            w_mean=0.0, w_stddev=0.03, min_modulation=0.0001, 
-            reproduct_deviation=0.7, scope="new_som"):
+            w_mean=0.0, w_stddev=0.03, min_modulation=0.0001,
+            max_modulation = 1.0, reproduct_deviation=0.7, 
+            scope="new_som", optimizer=tf.train.AdamOptimizer ):
         """
         :param input_channels: length of input patterns
         :param output_channels: length of the vector of output units
         :param batch_num: number of patterns presented in a single batch
         :param w_stdder: standard deviation og initial weight distribution
+        :param min_modulation: minimal modulation (input modulation is zero)
+        :param max_modulation: maximal modulation 
         :param scope: the scope which the object is put into
         """
         
@@ -79,6 +83,8 @@ class SOM(object):
             self.w_stddev = w_stddev
             self.reproduct_deviation = reproduct_deviation
             self.min_modulation = min_modulation
+            self.max_modulation = max_modulation
+            self.optimizer = optimizer
 
             # weights
             self.W = tf.get_variable("som_W", (self.input_channels, 
@@ -140,11 +146,11 @@ class SOM(object):
             
             # radial bases of the output layer based on modulation measure
             self.modulation_phis = self.get_phis(self.centroids, 
-                    sigma=(modulation + self.min_modulation))
+                    sigma=(self.max_modulation*modulation + 
+                        self.min_modulation))
             
             # The overall learning rate is linked to the modulation mean
             #self.modulation_phis = self.modulation_mean*self.modulation_phis
-            self.modulation_phis = self.modulation_phis
             
             # do the modulation
             self.neighbour = tf.gather(self.modulation_phis, rk,
@@ -169,23 +175,39 @@ class SOM(object):
             self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2),  
                 modulated_rk), name="loss")
             # gradient descent
-            self.train = tf.train.AdamOptimizer(
+            self.train = self.optimizer(
                     learning_rate).minimize(
                     self.loss, var_list=[self.W], name="Gradient")
 
         return self.loss, self.train
+    
+    def get_reproduction_phis(self, means, current_dev=None, standardize=True):
+        
+        with tf.variable_scope(self.scope):
 
-    def reproduction_graph(self, means):
+            if current_dev is None:
+
+                # the resulting radial bases of the output
+                reproduction_psis = interp(self.centroids, means, 
+                        self.reproduct_deviation, name="reproduction_psis",
+                        standardize=standardize)
+            else:
+                # the resulting radial bases of the output
+                reproduction_psis = interp(self.centroids, means, 
+                        current_dev, name="reproduction_psis", 
+                        standardize=standardize)
+        
+        return reproduction_psis
+
+    def reproduction_graph(self, means, current_dev=None):
         """
             :param means: 2D Tensor (dtype=tf.float32, shape=(None, 2))
         """
 
+        self.reproduction_psis = self.get_reproduction_phis(means, current_dev)
+
         with tf.variable_scope(self.scope):
-
-            # the resulting radial bases of the output
-            self.reproduction_psis = interp(self.centroids, means, 
-                    self.reproduct_deviation, name="reproduction_psis")
-
+        
             # backprop radial bases to get the generated patterns
             self.x_sampled = tf.matmul(self.reproduction_psis,
                     self.W, transpose_b=True) 

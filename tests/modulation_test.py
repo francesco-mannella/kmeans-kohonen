@@ -61,6 +61,7 @@ output_num = 100
 output_side = int(np.sqrt(output_num))
 batch_num = 500
 epochs = 3000
+trials = 100
 
 som_learning_rate = 0.03
 rep_deviation = 0.7
@@ -124,32 +125,35 @@ with graph.as_default():
             idx = target_idcs[curr_target_idx]
             curr_means =( means[idx]/10.0 - 0.5)
             curr_out = rotated[idx]/10.0 - 0.5
+            
+            for trial in range(trials):
 
-            curr_data = 0.15*np.random.randn(batch_num, 2) + curr_means
-            
-            norms, outs , loss_ = ssom.train_step(
-                    curr_data, 
-                    som_learning_rate*np.exp(-epoch/(epochs*0.07)),
-                    centroids[idx[0]].reshape(1, output_num),
-                    session)
-            
-            print "epoch:%4d       loss:% 10.3f" % (epoch, loss_)
-                       
-            W_ = ssom.W.eval()
-            
-            wscatter.set_offsets(W_.T)
-            wmscatter.set_offsets(curr_means[0])
-            wiscatter.set_offsets(W_[:,idx[0]])
-            dscatter.set_offsets(curr_data)
-            
-            W_ = W_.reshape(2, output_side, output_side) 
-            for i in range(output_side):
-                wgrid[0][i].set_data(*W_[:,:,i])
-            for i in range(output_side):
-                wgrid[1][i].set_data(*W_[:,i,:])
-            
-            fig.canvas.draw()
-            fig.savefig("frames/k%06d.png" % epoch)
+                curr_data = 0.15*np.random.randn(batch_num, 2) + curr_means
+                
+                norms, outs , loss_ = ssom.train_step(
+                        curr_data, 
+                        som_learning_rate*np.exp(-epoch/(epochs*0.07)),
+                        centroids[idx[0]].reshape(1, output_num),
+                        session)
+                
+                print "epoch:%4d       loss:% 10.3f" % (epoch, loss_)
+                        
+                W_ = ssom.W.eval()
+                
+                wscatter.set_offsets(W_.T)
+                wmscatter.set_offsets(curr_means[0])
+                wiscatter.set_offsets(W_[:,idx[0]])
+                dscatter.set_offsets(curr_data)
+                
+                W_ = W_.reshape(2, output_side, output_side) 
+                for i in range(output_side):
+                    wgrid[0][i].set_data(*W_[:,:,i])
+                for i in range(output_side):
+                    wgrid[1][i].set_data(*W_[:,i,:])
+                
+                fig.canvas.draw()
+                print trial
+                fig.savefig("frames/k{:06d}{:06d}.png".format(epoch, trial))
                 
             losses[epoch] = loss_.mean() 
             

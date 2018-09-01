@@ -100,6 +100,8 @@ class SOM(object):
             self.centroids = tf.constant(np.vstack([X.ravel(), 
                 Y.ravel()]).T, name="centroids")
             
+            # TODO: substitute get_phis with interp and simplify class erasing
+            #       get_phis
             self.prototype_outputs = self.get_phis(self.centroids, 
                     self.reproduct_deviation)
             

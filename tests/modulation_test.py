@@ -100,16 +100,16 @@ ax.set_xlim([-1.2, 1.2]); ax.set_ylim([-1.2, 1.2])
 fig_loss = plt.figure()
 ax_loss = fig_loss.add_subplot(111)
 loss_plot, = ax_loss.plot(range(epochs),np.zeros(epochs))
-ax_loss.set_ylim([0,5]) 
+ax_loss.set_ylim([2,5]) 
 
 
 graph = tf.Graph()
 with graph.as_default():
 
     ssom = SOM(input_num, output_num, batch_num, w_stddev=0.01, 
-            min_modulation=1.0, reproduct_deviation=rep_deviation)
+            neighborhood=rep_deviation)
 
-    ssom.generate_closed_graph()
+    ssom.generate_custom_closed_graph()
 
     with tf.Session(config=config) as session:
         tf.global_variables_initializer().run()
@@ -132,7 +132,7 @@ with graph.as_default():
                 
                 norms, outs , loss_ = ssom.train_step(
                         curr_data, 
-                        som_learning_rate*np.exp(-epoch/(epochs*0.07)),
+                        som_learning_rate*np.exp(-epoch/(epochs*0.01)),
                         centroids[idx[0]].reshape(1, output_num),
                         session)
                 
@@ -157,7 +157,9 @@ with graph.as_default():
                 
             losses[epoch] = loss_.mean() 
             
-            loss_plot.set_ydata(np.log(losses))     
+            loglosses = (losses)
+            loss_plot.set_ydata(loglosses)     
+            ax_loss.set_ylim([loglosses.min(),loglosses.max()]) 
             fig_loss.canvas.draw()
             fig_loss.savefig("loss.png")    
         

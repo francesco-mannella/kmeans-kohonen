@@ -102,12 +102,18 @@ class SOM(object):
             self.neighborhood_bases = interp(self.centroids, self.centroids, 
                     self.neighborhood, "neighborhood_bases", standardize=False)
             
-    def spreading_graph(self, x):
+    
+    def spreading_graph(self, x, neigh = None, return_value="bases"):
         """
             :param x: 2D Tensor (dtype=tf.float32, shape=(batch_num, 
                         self.input_channels)
+            :param neigh: current neighborhood for the generated bases 
+            :param return_value: {"bases", "outs"}
         """
         
+        if neigh is None:
+            neigh = self.neighborhood
+
         with tf.variable_scope(self.scope):
 
             # spreading 
@@ -128,10 +134,12 @@ class SOM(object):
                 rk%self.output_side)))
             outs = tf.cast(outs, tf.float32)
             out_bases = interp(self.centroids, outs,
-                    self.neighborhood, name="out_bases")
+                    neigh , name="out_bases")
+        if return_value == "bases":
+            return self.norms, rk_bases, out_bases
+        elif return_value == "outs":
+            return self.norms, rk_bases, out_bases, outs
 
-        return self.norms, rk_bases, out_bases
-    
     def backpropagate_graph(self, output_points, current_dev=None):
         """
             :param output_points: 2D Tensor (dtype=tf.float32, shape=(None, 2))
@@ -212,7 +220,6 @@ class SOM(object):
         
         :returns: current distances from prototypes and loss value
         """
-        
 
         if modulation is None:
             modulation = np.ones([1, self.output_channels])

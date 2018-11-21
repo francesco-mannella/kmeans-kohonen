@@ -62,12 +62,21 @@ def reshape_weights(W):
 
     return res
 
-fig_weights = plt.figure(figsize=(16, 10))
-ax = fig_weights.add_subplot(121)
+fig_weights = plt.figure(figsize=(10, 4))
+ax = fig_weights.add_subplot(131)
 im_weights = ax.imshow(np.zeros([2,2]),vmin=0, vmax=255,
         cmap=plt.cm.gray)
 ax.axis('off')
-ax2 = fig_weights.add_subplot(122, aspect="equal")
+ax2 = fig_weights.add_subplot(132, aspect="equal")
+ax3 = fig_weights.add_subplot(133)
+face_weight = ax3.imshow(np.zeros([2,2]),vmin=0, vmax=255,
+        cmap=plt.cm.gray)
+
+fig_weights_raw = plt.figure(figsize=(20, 20))
+axr = fig_weights_raw.add_subplot(111)
+im_weights_raw = axr.imshow(np.zeros([2,2]),vmin=0, vmax=255,
+        cmap=plt.cm.gray)
+axr.axis('off')
 #-------------------------------------------------------------------------------
 
 input_num = img_len
@@ -98,7 +107,7 @@ points = np.array([
 for i, p in enumerate(points):
     ax2.text(p[1]-.5, p[0], label_types[i])
 
-ax2.text(11, 7, "A=ASIAN\nW=WHITE\nL=LATINO\nB=BLACK\n\nF=FEMALE\nM=MALE")
+ax2.text(10, 7, "A=ASIAN\nW=WHITE\nL=LATINO\nB=BLACK\n\nF=FEMALE\nM=MALE")
 ax2.set_xticks(range(10))
 ax2.set_yticks(range(10))
 ax2.set_xlim([-2, 16])
@@ -141,6 +150,9 @@ with graph.as_default():
                 
             W = ssom.W.eval()
             im_weights.set_data(reshape_weights(W).T)
+            im_weights_raw.set_data(reshape_weights(W).T)
+            face_weight.set_data(W.T[45].reshape(152, 107).T)
             fig_weights.savefig("frames/w%08d.png" % epoch)
+            fig_weights_raw.savefig("frames/wr%08d.png" % epoch)
     
 

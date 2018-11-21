@@ -60,8 +60,9 @@ input_num = 2
 output_num = 100
 output_side = int(np.sqrt(output_num))
 batch_num = 500
-epochs = 3000
-trials = 100
+epochs = 1000
+decay = 0.1
+trials = 10 
 
 som_learning_rate = 0.03
 rep_deviation = 0.7
@@ -70,12 +71,12 @@ x = np.arange(float(output_side))
 X, Y = np.meshgrid(x, x)
 means = np.vstack((Y.ravel(), X.ravel())).T
 theta = np.pi*0.25
-rot = np.array([[np.cos(theta), -np.sin(theta)],[np.sin(theta), 
-    np.cos(theta)]])
+rot = np.array([[np.cos(theta), -np.sin(theta)],
+                [np.sin(theta),  np.cos(theta)]])
 rotated = np.dot(means - output_side/2., rot)
 rotated += output_side/2.
 
-dists = np.linalg.norm(means.reshape(output_num, 1, 2) - 
+dists = np.linalg.norm(rotated.reshape(output_num, 1, 2) - 
         rotated.reshape(1, output_num, 2), axis=2)
 centroids = gauss(dists, rep_deviation)
 
@@ -96,7 +97,7 @@ wiscatter = ax.scatter(0,0,c="grey", s=100)
 wscatter = ax.scatter(0,0, c=colors, s=20)
 dscatter =  ax.scatter(0,0, c="green", s=5)
 wmscatter = ax.scatter(0,0, c=(0,0.6,0), s=100)
-ax.set_xlim([-1.2, 1.2]); ax.set_ylim([-1.2, 1.2])
+ax.set_xlim([-0.7, 0.7]); ax.set_ylim([-0.7, 0.7])
 fig_loss = plt.figure()
 ax_loss = fig_loss.add_subplot(111)
 loss_plot, = ax_loss.plot(range(epochs),np.zeros(epochs))
@@ -128,11 +129,11 @@ with graph.as_default():
             
             for trial in range(trials):
 
-                curr_data = 0.15*np.random.randn(batch_num, 2) + curr_means
+                curr_data = np.random.rand(batch_num, 2) - 0.5
                 
                 norms, outs , loss_ = ssom.train_step(
                         curr_data, 
-                        som_learning_rate*np.exp(-epoch/(epochs*0.01)),
+                        som_learning_rate*np.exp(-epoch/(epochs*decay)),
                         centroids[idx[0]].reshape(1, output_num),
                         session)
                 

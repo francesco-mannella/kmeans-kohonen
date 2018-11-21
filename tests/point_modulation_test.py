@@ -29,45 +29,49 @@ def gauss(d, s): return np.exp(-0.5*(s**-2)*d**2)
 if not os.path.exists("frames"): os.makedirs("frames")  
 
 #-------------------------------------------------------------------------------
-# load MNIST dataset
+# point dataset
 
-mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-train_data = mnist.train.images # Returns np.array
-shutil.rmtree("MNIST-data")
+train_data = np.random.uniform(-2, 2,  [10000, 2]) 
 
-images = mnist.train.images
-labels = mnist.train.labels
-data_len, img_len = images.shape
+data_len, img_len = train_data.shape
+
+labels = np.zeros(data_len)
+x =  train_data[:, 0]
+y =  train_data[:, 1]
+labels[np.logical_and(
+    ((-2 <= x) & (x < 0)),
+    ((-2 <= y) & (y < 0)))] = 0
+labels[np.logical_and(
+    ((0 <= x) & (x <= 2)),
+    ((-2 <= x) & (y < 0)))] = 1
+labels[np.logical_and(
+    ((-2 <= x) & (x < 0)),
+    ((0 <= y) & (y <= 2)))] = 2
+labels[np.logical_and(
+    ((0 <= x) & (x <= 2)),
+    ((0 <= y) & (y <= 2)))] = 3
+
+labels = labels.astype(int)
+
 data_idcs = np.arange(data_len)
 
 #-------------------------------------------------------------------------------
 # Prepare graphics
 
-def reshape_weights(W):
-    n_inp, n_out = W.shape
-    oside = int(np.sqrt(n_out))
-    side = int(np.sqrt(n_inp))
-    
-    res = np.zeros([oside*side, oside*side])
-    
-    for o in range(n_out):
-        w = W[:, o].reshape(side, side)
-        row = side*(o//oside) 
-        col = side*(o%oside) 
-        res[row:(row + side), col:(col + side)] = w
+fig_weights = plt.figure(figsize=(10, 10))
+ax = fig_weights.add_subplot(111)
+ps = np.zeros([100, 2])
+im_weights = ax.scatter(ps[:,0], ps[:,1], 
+        c=plt.cm.rainbow(np.arange(100)/100.))
+ax.set_xlim([-4, 4])
+ax.set_ylim([-4, 4])
 
-    return res
-
-fig_weights = plt.figure(figsize=(8, 4))
-ax = fig_weights.add_subplot(121, aspect="equal")
-im_weights = ax.imshow(np.zeros([2,2]), vmin=0, vmax=1)
-ax.set_axis_off()
-ax1 = fig_weights.add_subplot(122, aspect="equal")
 #-------------------------------------------------------------------------------
 
 input_num = img_len
 output_num = 100
 output_side = int(np.sqrt(output_num))
+label_num = 4
 batch_num = 500
 epochs = 3000
 batch_len = data_len / batch_num 
@@ -82,32 +86,10 @@ grid = np.vstack([X.ravel(), Y.ravel()]).T
 
 points = np.array(
        [
-        [1, 3],
-        [1, 6],
-        [3, 1],
-        [3, 8],
-        [4.5, 3],
-        [4.5, 6],
-        [6, 1],
-        [6, 8],
-        [8, 3],
-        [8, 6]])
-
-ax1.set_xlim([-1, output_side])
-ax1.set_xticks(range(output_side))
-ax1.set_ylim([-1, output_side])
-ax1.set_yticks(range(output_side))
-for i, p in enumerate(points):
-    ax1.add_artist(plt.Circle(p, 1.5, 
-        edgecolor='black', facecolor='white' ))
-    ax1.text(p[0], 9 - p[1], s="%d"%i, fontsize=30, 
-            verticalalignment='center',
-            horizontalalignment='center')
-
-radial_bases = gauss(np.linalg.norm(
-    grid.reshape(1, output_num, 2) - 
-    points.reshape(output_side, 1, 2), axis=-1), 
-    deviation)
+        [1, 1],
+        [1, 8],
+        [8, 1],
+        [8, 8]  ])
 
 graph = tf.Graph()
 with graph.as_default():
@@ -127,25 +109,25 @@ with graph.as_default():
             curr_learning_rate = som_learning_rate*np.exp(-epoch/(epochs*decay))
             curr_radialbases =  gauss(np.linalg.norm(
                 grid.reshape(1, output_num, 2) - 
-                points.reshape(output_side, 1, 2), axis=-1), 
+                points.reshape(label_num, 1, 2), axis=-1), 
                 deviation*np.exp(-epoch/(epochs*decay)))
 
 
             for batch in range(batch_len):
                 
                 curr_idcs = data_idcs[batch_num*batch: batch_num*(batch +1)]
-                curr_images = images[curr_idcs]
+                curr_train_data = train_data[curr_idcs]
                 curr_labels = labels[curr_idcs]
                 curr_bases = curr_radialbases[curr_labels]
 
 
                 norms, outs, loss_ = ssom.train_step(
-                        curr_images, 
+                        curr_train_data, 
                         som_learning_rate*np.exp(-epoch/(epochs*0.01)),
                         curr_bases,
                         session)             
                 
             W = ssom.W.eval()
-            im_weights.set_data(reshape_weights(W))
+            im_weights.set_offsets(W.T)
             fig_weights.savefig("frames/w%08d.png" % epoch)
 

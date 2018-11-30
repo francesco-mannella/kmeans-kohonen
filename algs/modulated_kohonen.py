@@ -92,8 +92,6 @@ class SOM(object):
                     stddev=self.w_stddev))
             
             # centroid grid in the output space 
-            self.centroids = tf.get_variable(name="centroids", 
-                    shape=(self.output_channels, 2), dtype=tf.float32)
             x = np.arange(self.output_side, dtype="float32")
             Y, X = np.meshgrid(x,x)
             self.centroids = tf.constant(np.vstack([X.ravel(), 
@@ -159,6 +157,16 @@ class SOM(object):
         
         return x_sampled, out_bases
 
+    def compute_loss(self, norms, modulations):
+        with tf.variable_scope(self.scope):
+            
+            # the cost function is the sum of the modulated input-prototyres 
+            # distances
+            self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2),  
+                modulations), name="loss")
+        
+        return self.loss
+
     def training_graph(self, norms, modulations, learning_rate):
         """
             :param norms: 2D Tensor (dtype=tf.float32, shape=(batch_num,
@@ -168,12 +176,10 @@ class SOM(object):
             :param learning_rate: 0D Tensor (dtype=tf.float32)
         """
 
+        self.compute_loss(norms, modulations)
+
         with tf.variable_scope(self.scope):
             
-            # the cost function is the sum of the modulated input-prototyres 
-            # distances
-            self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2),  
-                modulations), name="loss")
             # gradient descent
             self.train = self.optimizer(
                     learning_rate).minimize(

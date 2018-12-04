@@ -100,7 +100,7 @@ wmscatter = ax.scatter(0,0, c=(0,0.6,0), s=100)
 ax.set_xlim([-0.7, 0.7]); ax.set_ylim([-0.7, 0.7])
 fig_loss = plt.figure()
 ax_loss = fig_loss.add_subplot(111)
-loss_plot, = ax_loss.plot(range(epochs),np.zeros(epochs))
+loss_plot, = ax_loss.plot(list(range(epochs)),np.zeros(epochs))
 ax_loss.set_ylim([2,5]) 
 
 
@@ -137,7 +137,7 @@ with graph.as_default():
                         centroids[idx[0]].reshape(1, output_num),
                         session)
                 
-                print "epoch:%4d       loss:% 10.3f" % (epoch, loss_)
+                print(("epoch:%4d       loss:% 10.3f" % (epoch, loss_)))
                         
                 W_ = ssom.W.eval()
                 
@@ -153,7 +153,7 @@ with graph.as_default():
                     wgrid[1][i].set_data(*W_[:,i,:])
                 
                 fig.canvas.draw()
-                print trial
+                print(trial)
                 fig.savefig("frames/k{:06d}{:06d}.png".format(epoch, trial))
                 
             losses[epoch] = loss_.mean() 

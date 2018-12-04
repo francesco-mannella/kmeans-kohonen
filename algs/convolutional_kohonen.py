@@ -65,8 +65,8 @@ def plots(W, norms, Session):
     # plot weights
 
     W_ = W.eval() 
-    print np.min(W_)
-    print np.max(W_)
+    print((np.min(W_)))
+    print((np.max(W_)))
     fig = plt.figure(figsize=(10, 10))
     kk = int(np.sqrt(output_channels))
     for i in range(kk):
@@ -155,7 +155,7 @@ with graph.as_default():
                     if curr_time >= sim_time:
                         raise TimeOverflow("No time left!")
                     
-                    print "epoch:%4d       batch:%4d" % (epoch, batch)
+                    print(("epoch:%4d       batch:%4d" % (epoch, batch)))
                     current_batch = train_data[batch * batch_num : (batch + 1) * batch_num ,:]
                     rk_, loss_, _ = session.run([rk, loss, train], feed_dict={x: current_batch, 
                         deviation: curr_deviation, learning_rate: curr_learning_rate})
@@ -169,6 +169,6 @@ with graph.as_default():
 
         except TimeOverflow:
 
-            print "Plotting partial results..."
+            print("Plotting partial results...")
         
                 

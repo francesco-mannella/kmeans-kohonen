@@ -142,9 +142,9 @@ with graph.as_default():
                     
                     curr_time = time.time() - start_time
                     if curr_time >= sim_time:
-                        raise "No time left!"
+                        raise Exception("No time left!")
                     
-                    print "epoch:%4d       batch:%4d" % (epoch, batch)
+                    print(("epoch:%4d       batch:%4d" % (epoch, batch)))
                     current_batch = train_data[batch * batch_num : (batch + 1) * batch_num ,:]
                     loss_, _ = session.run([loss, train], feed_dict={x: current_batch})
                     elosses.append(loss_)
@@ -155,6 +155,6 @@ with graph.as_default():
         
         except TimeOverflow:
 
-            print "Plotting partial results..."
+            print("Plotting partial results...")
           
       

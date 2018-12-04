@@ -177,7 +177,7 @@ def phi(x):
     g = tf.exp(-squared_norm/(2*(phi_sigma**2))) 
     # adjust dims in case of multidimensional output
     if len(g.shape) > 1: 
-        g = tf.transpose(g, [len(g.shape)-1] + range(len(g.shape)-1))
+        g = tf.transpose(g, [len(g.shape)-1] + list(range(len(g.shape)-1)))
     return g
 
 def get_likelihoods(t, phi_x, W, beta):
@@ -237,7 +237,7 @@ with graph.as_default():
                     
                     tmp_, loss_ , _ = session.run([tmp, loss, train], 
                             feed_dict={x_latent: latents, t_data: curr_batch})
-                    print "epoch:%4d       batch:%4d    loss:%10.6f" % (epoch, batch, loss_)
+                    print(("epoch:%4d       batch:%4d    loss:%10.6f" % (epoch, batch, loss_)))
                     # --------- 
                     
                     elosses.append(loss_)
@@ -252,5 +252,5 @@ with graph.as_default():
     
         except TimeOverflow:
     
-            print "Plotting partial results..."
+            print("Plotting partial results...")
         

@@ -94,9 +94,9 @@ points = np.array(
         [8, 6]])
 
 ax1.set_xlim([-1, output_side])
-ax1.set_xticks(range(output_side))
+ax1.set_xticks(list(range(output_side)))
 ax1.set_ylim([-1, output_side])
-ax1.set_yticks(range(output_side))
+ax1.set_yticks(list(range(output_side)))
 for i, p in enumerate(points):
     ax1.add_artist(plt.Circle(p, 1.5, 
         edgecolor='black', facecolor='white' ))

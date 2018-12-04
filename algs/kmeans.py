@@ -70,7 +70,7 @@ with graph.as_default():
             # run a batch of train steps 
             elosses = []
             for batch in range(data_num//batch_num):
-                print "epoch:%4d       batch:%4d" % (epoch, batch)
+                print(("epoch:%4d       batch:%4d" % (epoch, batch)))
                 loss_, _ = session.run([loss, train],
                         feed_dict={x: train_data[batch * batch_num : (batch + 1) * batch_num ,:]})
                 elosses.append(loss_)
@@ -83,5 +83,5 @@ with graph.as_default():
 
     plt.figure()
     plt.plot(losses)
-    raw_input()
+    eval(input())
                 

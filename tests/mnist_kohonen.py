@@ -121,7 +121,7 @@ with graph.as_default():
                 
                 # decaying deviation 
                 curr_deviation = 0.25*output_channels*np.exp(-epoch/float(epochs/6.0))
-                print curr_deviation
+                print(curr_deviation)
                 # decaying learning rate 
                 curr_learning_rate = initial_learning_rate*np.exp(-epoch/float(epochs/6.0))
 
@@ -133,7 +133,7 @@ with graph.as_default():
                     if curr_time >= sim_time:
                         raise TimeOverflow("No time left!")
                     
-                    print "epoch:%4d       batch:%4d" % (epoch, batch)
+                    print(("epoch:%4d       batch:%4d" % (epoch, batch)))
                     
                     curr_batch =  train_data[batch * batch_num : (batch + 1) * batch_num ,:]
                     
@@ -156,5 +156,5 @@ with graph.as_default():
 
         except TimeOverflow:
             
-            print "Plotting partial results..."
+            print("Plotting partial results...")
 

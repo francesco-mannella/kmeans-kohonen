@@ -102,7 +102,7 @@ with graph.as_default():
                     elosses.append(loss_)
 
                 losses.append(np.mean(elosses))
-                print losses[-1]
+                print((losses[-1]))
 
             W = som.W.eval()
 
@@ -124,5 +124,5 @@ with graph.as_default():
 
         except TimeOverflow:
             
-            print "Plotting partial results..."
+            print("Plotting partial results...")
 

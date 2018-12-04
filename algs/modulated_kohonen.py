@@ -128,7 +128,7 @@ class SOM(object):
             rk_bases = tf.gather(self.neighborhood_bases, rk)
 
             # real outputs
-            outs = tf.transpose(tf.stack((rk/self.output_side, 
+            outs = tf.transpose(tf.stack((rk//self.output_side, 
                 rk%self.output_side)))
             outs = tf.cast(outs, tf.float32)
             out_bases = interp(self.centroids, outs,

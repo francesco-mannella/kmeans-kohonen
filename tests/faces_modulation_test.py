@@ -108,8 +108,8 @@ for i, p in enumerate(points):
     ax2.text(p[1]-.5, p[0], label_types[i])
 
 ax2.text(10, 7, "A=ASIAN\nW=WHITE\nL=LATINO\nB=BLACK\n\nF=FEMALE\nM=MALE")
-ax2.set_xticks(range(10))
-ax2.set_yticks(range(10))
+ax2.set_xticks(list(range(10)))
+ax2.set_yticks(list(range(10)))
 ax2.set_xlim([-2, 16])
 ax2.set_ylim([12, -2])
 

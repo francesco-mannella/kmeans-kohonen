@@ -74,7 +74,7 @@ class SOM(object):
         
         self.scope = scope
 
-        with tf.variable_scope(scope):
+        with tf.variable_scope(scope, auxiliary_name_scope=False):
 
             self.input_channels = input_channels
             self.output_channels = output_channels
@@ -96,9 +96,10 @@ class SOM(object):
             Y, X = np.meshgrid(x,x)
             self.centroids = tf.constant(np.vstack([X.ravel(), 
                 Y.ravel()]).T, name="centroids")
-            
-            self.neighborhood_bases = interp(self.centroids, self.centroids, 
-                    self.neighborhood, "neighborhood_bases", standardize=False)
+        
+            with tf.name_scope("centroid_bases"):
+                self.neighborhood_bases = interp(self.centroids, self.centroids, 
+                        self.neighborhood, "neighborhood_bases", standardize=False)
             
     
     def spreading_graph(self, x, neigh = None, return_value="bases"):
@@ -112,31 +113,37 @@ class SOM(object):
         if neigh is None:
             neigh = self.neighborhood
 
-        with tf.variable_scope(self.scope):
+        with tf.variable_scope(self.scope, auxiliary_name_scope=False):
 
-            # spreading 
-            # broadcasting x and W 
-            xrep = tf.reshape(x, (self.batch_num, self.input_channels, 1))
-            wrep = tf.reshape(self.W, (1, self.input_channels, 
-                self.output_channels))
-            # distances of inputs from weights
-            o = xrep - wrep
-            self.norms = tf.norm(o, axis=1, name="norms")
-            # for each pattern a vector indicating a gaussian around 
-            #    the winner prototipe
-            rk = tf.argmin(self.norms, axis=1, name="rk")
-            rk_bases = tf.gather(self.neighborhood_bases, rk)
+            with tf.name_scope("som_spreading"):
 
-            # real outputs
-            outs = tf.transpose(tf.stack((rk//self.output_side, 
-                rk%self.output_side)))
-            outs = tf.cast(outs, tf.float32)
-            out_bases = interp(self.centroids, outs,
-                    neigh , name="out_bases")
+                with tf.name_scope("spreading"):
+                    # spreading 
+                    # broadcasting x and W 
+                    xrep = tf.reshape(x, (self.batch_num, self.input_channels, 1))
+                    wrep = tf.reshape(self.W, (1, self.input_channels, 
+                        self.output_channels))
+                with tf.name_scope("norms"):
+                    # distances of inputs from weights
+                    o = xrep - wrep
+                    self.norms = tf.norm(o, axis=1)
+                with tf.name_scope("bases"):   
+                    # for each pattern a vector indicating a gaussian around 
+                    #    the winner prototipe
+                    rk = tf.argmin(self.norms, axis=1, name="rk")
+                    self.rk_bases = tf.gather(self.neighborhood_bases, rk)
+                with tf.name_scope("outputs"):   
+                    # real outputs
+                    outs = tf.transpose(tf.stack((rk//self.output_side, 
+                        rk%self.output_side)))
+                    outs = tf.cast(outs, tf.float32)
+                    out_bases = interp(self.centroids, outs,
+                            neigh , name="out_bases")
+            
         if return_value == "bases":
-            return self.norms, rk_bases, out_bases
+            return self.norms, self.rk_bases, out_bases
         elif return_value == "outs":
-            return self.norms, rk_bases, out_bases, outs
+            return self.norms, self.rk_bases, out_bases, outs
 
     def backpropagate_graph(self, output_points, current_dev=None):
         """
@@ -150,7 +157,7 @@ class SOM(object):
                         current_dev, name="backward_bases",
                         standardize=True)
 
-        with tf.variable_scope(self.scope):
+        with tf.variable_scope(self.scope, auxiliary_name_scope=False):
         
             # backprop radial bases to get the generated patterns
             x_sampled = tf.matmul(out_bases, self.W, transpose_b=True) 
@@ -158,12 +165,12 @@ class SOM(object):
         return x_sampled, out_bases
 
     def compute_loss(self, norms, modulations):
-        with tf.variable_scope(self.scope):
-            
-            # the cost function is the sum of the modulated input-prototyres 
-            # distances
-            self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2),  
-                modulations), name="loss")
+        with tf.variable_scope(self.scope,  auxiliary_name_scope=False):
+            with tf.name_scope("loss"): 
+                # the cost function is the sum of the modulated input-prototyres 
+                # distances
+                self.loss = tf.reduce_sum(tf.multiply(tf.pow(norms, 2),  
+                    modulations))
         
         return self.loss
 
@@ -178,7 +185,7 @@ class SOM(object):
 
         self.compute_loss(norms, modulations)
 
-        with tf.variable_scope(self.scope):
+        with tf.variable_scope(self.scope,  auxiliary_name_scope=False):
             
             # gradient descent
             self.train = self.optimizer(
@@ -189,7 +196,7 @@ class SOM(object):
                  
     def generate_closed_graph(self):
 
-        with tf.variable_scope(self.scope):
+        with tf.variable_scope(self.scope,  auxiliary_name_scope=False):
 
             self.x = tf.placeholder(dtype=tf.float32, shape=(self.batch_num, 
                 self.input_channels), name="x")
@@ -203,7 +210,7 @@ class SOM(object):
         
     def generate_custom_closed_graph(self):
 
-        with tf.variable_scope(self.scope):
+        with tf.variable_scope(self.scope,  auxiliary_name_scope=False):
 
             self.x = tf.placeholder(dtype=tf.float32, shape=(self.batch_num, 
                 self.input_channels), name="x")
